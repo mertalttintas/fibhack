@@ -65,6 +65,7 @@ export interface DeptTask {
   warning?: string;
   details?: DeptDetail;
   draft?: DeptDraft; // "AI İşliyor" aşamasının çıktısı: ön çalışma paketi
+  teams?: { sentAt: string; delivered: boolean; channel: string }; // Teams botu gönderim kaydı
   ai?: {
     provider: string;
     model: string;
