@@ -108,13 +108,13 @@ export default async function handler(req: any, res: any) {
   if (!idea || typeof idea !== "string" || idea.length > 2000) {
     return res.status(400).json({ error: "invalid_idea" });
   }
-  if (!process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) {
+  if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) {
     return res.status(503).json({ error: "no_api_key" });
   }
 
   try {
-    const { json, provider } = await generateStructured(SYSTEM, `Kampanya fikri: ${idea}`, SCHEMA, 8000);
-    return res.status(200).json({ ...json, provider });
+    const { json, provider, model } = await generateStructured(SYSTEM, `Kampanya fikri: ${idea}`, SCHEMA, 8000);
+    return res.status(200).json({ ...json, provider, model, analyzedAt: new Date().toISOString() });
   } catch (err: any) {
     console.error("analyze error:", err?.message ?? err);
     return res.status(502).json({ error: "ai_error" });

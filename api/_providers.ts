@@ -1,5 +1,51 @@
 import Anthropic from "@anthropic-ai/sdk";
 
+type ProviderResult = {
+  json: any;
+  provider: "openai" | "claude" | "gemini";
+  model: string;
+};
+
+function responseText(data: any): string {
+  if (typeof data?.output_text === "string") return data.output_text;
+  return (data?.output ?? [])
+    .flatMap((item: any) => item?.content ?? [])
+    .filter((part: any) => part?.type === "output_text")
+    .map((part: any) => part?.text ?? "")
+    .join("");
+}
+
+async function callOpenAI(system: string, user: string, schema: any, maxTokens: number) {
+  const model = (process.env.OPENAI_MODEL || "gpt-5.6-luna").trim();
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${(process.env.OPENAI_API_KEY || "").trim()}`,
+    },
+    body: JSON.stringify({
+      model,
+      instructions: system,
+      input: user,
+      reasoning: { effort: "low" },
+      max_output_tokens: maxTokens,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "orchestrator_response",
+          strict: true,
+          schema,
+        },
+      },
+    }),
+  });
+  if (!res.ok) throw new Error(`openai ${res.status}: ${(await res.text()).slice(0, 400)}`);
+  const data: any = await res.json();
+  const text = responseText(data);
+  if (!text) throw new Error("openai: empty response");
+  return { json: JSON.parse(text), model };
+}
+
 // Anthropic JSON şemasını Gemini response_schema formatına çevirir
 // (uppercase tipler, additionalProperties yok, ["x","null"] → nullable)
 export function toGeminiSchema(s: any): any {
@@ -73,18 +119,28 @@ export async function generateStructured(
   user: string,
   schema: any,
   maxTokens = 8000
-): Promise<{ json: any; provider: "claude" | "gemini" }> {
+): Promise<ProviderResult> {
   const errors: string[] = [];
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const result = await callOpenAI(system, user, schema, maxTokens);
+      return { json: result.json, provider: "openai", model: result.model };
+    } catch (e: any) {
+      console.warn("OpenAI provider failed:", e?.message ?? e);
+      errors.push(`openai: ${e?.message ?? e}`);
+    }
+  }
   if (process.env.ANTHROPIC_API_KEY) {
     try {
-      return { json: await callAnthropic(system, user, schema, maxTokens), provider: "claude" };
+      return { json: await callAnthropic(system, user, schema, maxTokens), provider: "claude", model: "claude-opus-4-8" };
     } catch (e: any) {
       errors.push(`anthropic: ${e?.message ?? e}`);
     }
   }
   if (process.env.GEMINI_API_KEY) {
     try {
-      return { json: await callGemini(system, user, schema, maxTokens), provider: "gemini" };
+      const model = (process.env.GEMINI_MODEL || "gemini-flash-latest").trim();
+      return { json: await callGemini(system, user, schema, maxTokens), provider: "gemini", model };
     } catch (e: any) {
       errors.push(`gemini: ${e?.message ?? e}`);
     }

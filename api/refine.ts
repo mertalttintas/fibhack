@@ -47,6 +47,8 @@ ORGANIZATIONAL MEMORY (önerilerinde referans ver):
 
 KURALLAR:
 - "aiComment": 2-4 cümlelik samimi ama profesyonel bir tartışma yorumu — fikri nasıl anladığını, hangi varsayımları yaptığını, neyi güçlendirdiğini söyle. Kullanıcıya danışan bir iş ortağı gibi konuş.
+- Kritik bir bilgi eksikse (teklif, hedef segment, zamanlama veya KPI) aiComment sonunda en fazla 2 net soru sor; yine de mevcut bilgilerle taslak brief üret ki kullanıcı kart üzerinden ilerleyebilsin.
+- Sadece onaylayan bir asistan olma: zayıf veya riskli bir seçim görürsen "bunu şu nedenle şöyle değiştirirsen daha güçlü olur" biçiminde somut öneri ver.
 - "brief": fikri 6 alanlı yapılandırılmış brief'e çevir (başlık, amaç, hedef segment, kanallar, zamanlama, başarı ölçütü). Eksik bilgiyi geçmiş veriye dayanarak makul varsayımlarla doldur ve bunu aiComment'te belirt.
 - "suggestions": 2-3 kısa iyileştirme önerisi (kullanıcı isterse bunları feedback olarak geri yazabilir).
 - "routing": fikirle gerçekten ilgili departmanları listele (genellikle 4'ü de; ama fikir hukuki risk taşımıyorsa Legal'i "Düşük" öncelikle yine ekle). Her biri için 1 cümlelik somut gerekçe ve öncelik.
@@ -60,7 +62,7 @@ export default async function handler(req: any, res: any) {
   if (!idea || typeof idea !== "string" || idea.length > 2000) {
     return res.status(400).json({ error: "invalid_idea" });
   }
-  if (!process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) {
+  if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) {
     return res.status(503).json({ error: "no_api_key" });
   }
 
@@ -70,8 +72,8 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { json, provider } = await generateStructured(SYSTEM, userContent, SCHEMA, 4000);
-    return res.status(200).json({ ...json, provider });
+    const { json, provider, model } = await generateStructured(SYSTEM, userContent, SCHEMA, 4000);
+    return res.status(200).json({ ...json, provider, model, analyzedAt: new Date().toISOString() });
   } catch (err: any) {
     console.error("refine error:", err?.message ?? err);
     return res.status(502).json({ error: "ai_error" });

@@ -4,6 +4,37 @@ export type Department = "CRM" | "Veri Platformları" | "Legal" | "Pazarlama";
 
 export type TaskStatus = "waiting" | "processing" | "assigned" | "done";
 
+export type CampaignStatus = "pending" | "processing" | "completed" | "error";
+
+export interface TraceEvent {
+  id: string;
+  label: string;
+  detail: string;
+  status: "running" | "done" | "error";
+  timestamp: string;
+  algorithm?: string;
+  why?: string;
+  inputs?: string[];
+  outputs?: string[];
+  score?: number;
+}
+
+export interface CampaignJob {
+  id: string;
+  title: string;
+  idea: string;
+  createdAt: string;
+  status: CampaignStatus;
+  provider?: string;
+  model?: string;
+  summary?: string;
+  score?: number; // 0-100 kampanya başarı skoru
+  trace: TraceEvent[];
+  brief: CampaignBrief;
+  suggestions: string[];
+  routing: RouteItem[];
+}
+
 export interface DeptDetail {
   kpis: { label: string; value: string }[];
   subtasks: { name: string; owner: string; eta: string; status: "planlandı" | "sürüyor" | "hazır" }[];
@@ -23,6 +54,12 @@ export interface DeptTask {
   rationale: string; // AI karar gerekçesi
   warning?: string;
   details?: DeptDetail;
+  ai?: {
+    provider: string;
+    model: string;
+    analyzedAt: string;
+    memoryRefs: string[];
+  };
 }
 
 export interface DeptCard {
@@ -40,6 +77,9 @@ export interface AnalyzeResult {
   memory: { title: string; text: string; refs: string[] };
   cards: DeptCard[];
   live: boolean; // true = gerçek Claude analizi, false = simülasyon
+  provider?: string;
+  model?: string;
+  analyzedAt?: string;
 }
 
 // ---- Ön analiz / brief onay akışı ------------------------------------------
@@ -65,6 +105,8 @@ export interface RefineResult {
   suggestions: string[];
   routing: RouteItem[];
   live: boolean;
+  provider?: string;
+  model?: string;
 }
 
 export function localRefine(idea: string, feedback?: string): RefineResult {
@@ -94,6 +136,59 @@ export function localRefine(idea: string, feedback?: string): RefineResult {
     ],
     live: false,
   };
+}
+
+// ---- Kampanya başarı skoru --------------------------------------------------
+// Brief'in netliği + geçmiş kampanya verisiyle örtüşme üzerinden deterministik
+// bir ön skor üretir. AI çıktısına bağımlı değildir; demo'da çevrimdışı çalışır.
+
+export interface CampaignScore {
+  total: number;
+  label: string;
+  parts: { key: string; label: string; score: number; hint: string }[];
+}
+
+export function scoreCampaign(brief: CampaignBrief): CampaignScore {
+  const all = `${brief.objective} ${brief.segment} ${brief.channels} ${brief.timing} ${brief.kpi}`.toLocaleLowerCase("tr-TR");
+  const hasNumber = (value: string) => /\d/.test(value);
+
+  const clarity = Math.min(100,
+    (brief.objective.length > 20 ? 30 : 15) +
+    (hasNumber(brief.kpi) ? 40 : 15) +
+    (/t\+|hafta|gün|ay|q[1-4]|\d/.test(brief.timing.toLocaleLowerCase("tr-TR")) ? 30 : 10));
+
+  const channelText = brief.channels.toLocaleLowerCase("tr-TR");
+  let channelFit = 45;
+  if (channelText.includes("push")) channelFit += 25;
+  if (channelText.includes("in-app") || channelText.includes("story")) channelFit += 20;
+  if (channelText.includes("banner")) channelFit += 10;
+  if (channelText.includes("e-posta")) channelFit -= 10;
+  channelFit = Math.max(20, Math.min(100, channelFit));
+
+  const segmentText = brief.segment.toLocaleLowerCase("tr-TR");
+  const segmentFocus = Math.max(25, Math.min(100,
+    (/\d{2}\s*-\s*\d{2}|\d{2}\+/.test(segmentText) ? 40 : 15) +
+    (hasNumber(segmentText) ? 25 : 10) +
+    (/mobil|aktif|kira|öğrenci|kobi|emekli|alarm/.test(segmentText) ? 35 : 15)));
+
+  const memoryTags = ["kira", "puan", "öğrenci", "genç", "kredi", "kart", "mevduat", "faiz", "kobi", "pos", "emekli", "döviz", "konut"];
+  const memoryMatch = Math.min(100, 30 + memoryTags.filter((tag) => all.includes(tag)).length * 14);
+
+  let compliance = 88;
+  if (/faiz|puan|getiri/.test(all)) compliance -= 15;
+  if (/kredi/.test(all)) compliance -= 8;
+  compliance = Math.max(45, compliance);
+
+  const parts = [
+    { key: "clarity", label: "Brief netliği", score: clarity, hint: "Ölçülebilir KPI ve net zamanlama", weight: 0.25 },
+    { key: "channel", label: "Kanal geçmişi", score: channelFit, hint: "Seçilen kanalların geçmiş performansı", weight: 0.25 },
+    { key: "segment", label: "Segment odağı", score: segmentFocus, hint: "Hedef kitle tanımının keskinliği", weight: 0.2 },
+    { key: "memory", label: "Hafıza eşleşmesi", score: memoryMatch, hint: "Benzer geçmiş kampanya verisi mevcudiyeti", weight: 0.15 },
+    { key: "compliance", label: "Uyum kolaylığı", score: compliance, hint: "BDDK/KVKK onay yükü düşükse yüksek", weight: 0.15 },
+  ];
+  const total = Math.round(parts.reduce((sum, part) => sum + part.score * part.weight, 0));
+  const label = total >= 75 ? "Güçlü aday" : total >= 55 ? "Umut verici" : "Revize önerilir";
+  return { total, label, parts: parts.map(({ weight: _weight, ...part }) => part) };
 }
 
 export interface PastCampaign {
@@ -465,6 +560,81 @@ export const initialTasks: DeptTask[] = [
     priority: "Yüksek",
     rationale:
       "Puan programları müşteri harcama verisi işlediği için KVKK kapsamı genişliyor; geçmiş denetim bulguları rıza metninin kampanya lansmanından önce güncellenmesini zorunlu kılıyor.",
+  },
+];
+
+// ---- Demo: kuyruğa önceden işlenmiş kampanyalar -----------------------------
+
+const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
+
+function demoTrace(offsetMinutes: number, memoryDetail: string, channelDetail: string, memoryScore: number, channelScore: number): TraceEvent[] {
+  const at = (step: number) => minutesAgo(offsetMinutes - step);
+  return [
+    { id: "intake", label: "Kampanya girdisi ayrıştırıldı", detail: "Amaç ve ürün terimleri çıkarıldı", status: "done", timestamp: at(0), algorithm: "Lexical intent parser v2", why: "Hangi analizlerin çalıştırılacağını ve doğru referans havuzunu belirlemek için.", inputs: ["Onaylanan kampanya brief'i"], outputs: ["ürün", "segment", "kanal terimleri"] },
+    { id: "segment", label: "Segment sinyalleri çıkarıldı", detail: "Hedef kitle sinyalleri brief'ten doğrulandı", status: "done", timestamp: at(1), algorithm: "Kural tabanlı segment sınıflandırıcı", why: "Kanal uygunluğu ve CRM veri talebini hedef kitleye göre özelleştirmek için.", inputs: ["Yaş", "ürün", "davranış anahtar kelimeleri"], outputs: ["Segment profili"], score: 86 },
+    { id: "memory", label: "Benzer kampanyalar sıralandı", detail: memoryDetail, status: "done", timestamp: at(2), algorithm: "Weighted Jaccard Retrieval", why: "Yeni kararı ölçülmüş geçmiş sonuçlarla temellendirmek için.", inputs: ["5 geçmiş kampanya", "ürün ve segment etiketleri"], outputs: [memoryDetail], score: memoryScore },
+    { id: "channels", label: "Kanal alternatifleri skorlandı", detail: channelDetail, status: "done", timestamp: at(3), algorithm: "Ağırlıklı MCDA kanal skoru", why: "Performans, segment uyumu, uygunluk ve hazırlığı birlikte değerlendirmek için.", inputs: ["%45 geçmiş performans", "%30 segment uyumu", "%15 uygunluk", "%10 hazırlık"], outputs: [channelDetail], score: channelScore },
+    { id: "rules", label: "Risk ve uygunluk kuralları çalıştı", detail: "BDDK iletişim kontrolü · KVKK izinli iletişim kontrolü", status: "done", timestamp: at(4), algorithm: "Deterministic compliance ruleset", why: "Model yorumundan bağımsız, tekrarlanabilir mevzuat kontrolü için.", inputs: ["Ürün türü", "müşteri verisi", "iletişim kanalı"], outputs: ["2 aktif kontrol"], score: 78 },
+    { id: "model", label: "AI görev sentezi tamamlandı", detail: "Yapılandırılmış çıktı alındı, dört departman kartı üretildi", status: "done", timestamp: at(5), algorithm: "OpenAI structured synthesis", why: "Analitik bulguları ekiplerin uygulayabileceği görev paketlerine çevirmek için.", inputs: ["4 analitik aşamanın çıktıları"], outputs: ["4 departman kartı", "14 alt görev"], score: 100 },
+    { id: "validation", label: "Departman kapsamı doğrulandı", detail: "CRM · Veri Platformları · Legal · Pazarlama eksiksiz", status: "done", timestamp: at(6), algorithm: "Set coverage validator", why: "Hiçbir departmanın model tarafından atlanmasını engellemek için.", inputs: ["Beklenen departman kümesi: 4"], outputs: ["4/4 kapsam"], score: 100 },
+    { id: "dispatch", label: "Team-bot mesajları hazırlandı", detail: "Her departmana ihtiyaç, veri talebi ve gerekçe bağlandı", status: "done", timestamp: at(7), algorithm: "Department payload composer", why: "Analiz sonucunu ekiplerin doğrudan aksiyona çevirebileceği mesajlara dönüştürmek için.", inputs: ["Departman kartları", "alt görevler", "ETA"], outputs: ["4 team-bot paketi"], score: 100 },
+  ];
+}
+
+export const seedCampaigns: CampaignJob[] = [
+  {
+    id: "cmp-demo-genc",
+    title: "Genç Segment Kredi Kartı — Kampüs Lansmanı",
+    idea: "Üniversite öğrencilerine kira ödemelerinde puan kazandıran kredi kartı kampanyası",
+    createdAt: minutesAgo(96),
+    status: "completed",
+    provider: "openai",
+    model: "gpt-4o",
+    score: 84,
+    summary: "18-30 kira ödeyen segment (38.200 kişi) push + in-app story ile hedeflendi; Legal görevi geçmiş gecikme verisi nedeniyle en yüksek öncelikle paralel açıldı.",
+    trace: demoTrace(96, "Kira Öde Puan Kazan %81 · Genç Segment Kredi Kartı %74", "Push 87/100 · In-app 84/100 · SMS 58/100", 81, 87),
+    brief: {
+      title: "Genç Segment Kredi Kartı — Kampüs Lansmanı",
+      objective: "Üniversite öğrencilerine kira ödemelerinde puan kazandıran kredi kartıyla genç segment kazanımı",
+      segment: "18-30 yaş, aktif mobil bankacılık kullanıcısı (~124.500 kişi), kira ödeyen alt segment öncelikli",
+      channels: "Push bildirimi (ana, A/B testli) + in-app story (destek)",
+      timing: "T+7 gün lansman · üniversite kayıt dönemi öncesi",
+      kpi: "Push açılma ≥ %40 · dönüşüm ≥ %7 · ilk 30 günde 8.500 yeni ürün",
+    },
+    suggestions: ["Kampüs anlaşmalı üniversitelerle ortak duyuru", "İlk 3 ay ücretsiz ek paket"],
+    routing: [
+      { department: "CRM", reason: "Hedef segment listesi ve churn önceliklendirmesi bu ekipte.", priority: "Yüksek" },
+      { department: "Legal", reason: "Puan iletişimi BDDK duyuru şartına takılabilir; erken başlatıldı.", priority: "Yüksek" },
+      { department: "Pazarlama", reason: "Push + in-app story üretimi ve A/B varyantları.", priority: "Orta" },
+      { department: "Veri Platformları", reason: "Gerçek zamanlı funnel dashboard kurulumu.", priority: "Orta" },
+    ],
+  },
+  {
+    id: "cmp-demo-doviz",
+    title: "Döviz Alarmı Kuranlara Vadeli Mevduat Önerisi",
+    idea: "Döviz kuru alarmı kuran müşterilere vadeli döviz mevduatı önerelim",
+    createdAt: minutesAgo(41),
+    status: "completed",
+    provider: "openai",
+    model: "gpt-4o",
+    score: 71,
+    summary: "Alarm kuran 12.400 müşteriye davranış tetikli push önerildi; mevduat getiri iletişimi için BDDK kontrolü Legal'e yönlendirildi.",
+    trace: demoTrace(41, "Mevduat Faiz Kampanyası %68 · Döviz sinyali +%21", "Push 79/100 · Mobil Banner 74/100 · E-posta 52/100", 68, 79),
+    brief: {
+      title: "Döviz Alarmı Kuranlara Vadeli Mevduat Önerisi",
+      objective: "Döviz alarmı kuran müşterileri davranış tetikli teklifle vadeli döviz mevduatına dönüştürmek",
+      segment: "Son 30 günde döviz alarmı kuran aktif mobil müşteriler (~12.400 kişi)",
+      channels: "Davranış tetikli push + mobil ana ekran banner",
+      timing: "T+3 gün lansman · alarm tetiklendiği anda gönderim",
+      kpi: "Push açılma ≥ %35 · mevduat dönüşümü ≥ %4,5 · 60 günde 550 yeni hesap",
+    },
+    suggestions: ["Alarm eşiğine yaklaşıldığında ikinci hatırlatma", "Getiri simülasyonu ekranı ile teklifi destekle"],
+    routing: [
+      { department: "CRM", reason: "Alarm kuran müşteri listesinin tetik bazlı segmentasyonu.", priority: "Yüksek" },
+      { department: "Legal", reason: "Getiri oranı iletişimi BDDK duyuru kontrolü gerektiriyor.", priority: "Yüksek" },
+      { department: "Pazarlama", reason: "Tetikli push metinleri ve banner kreatifi.", priority: "Orta" },
+      { department: "Veri Platformları", reason: "Alarm event akışının kampanya motoruna bağlanması.", priority: "Orta" },
+    ],
   },
 ];
 
