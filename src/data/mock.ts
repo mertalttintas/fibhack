@@ -214,6 +214,16 @@ export interface PastCampaign {
   conversion: number;
   result: "Başarılı" | "Kısmi" | "Düşük";
   insight: string;
+  details?: {
+    objective: string;
+    segment: string;
+    duration: string;
+    reach: string;
+    kpis: { label: string; target: string; actual: string; hit: boolean }[];
+    learnings: string[]; // organizational memory'ye işlenen dersler
+    departments: string[];
+    spark: number[]; // haftalık dönüşüm eğrisi
+  };
 }
 
 export interface TrendSignal {
@@ -238,36 +248,6 @@ export const liveMetrics = [
 
 export const pastCampaigns: PastCampaign[] = [
   {
-    id: "pc1",
-    name: "Genç Segment Kredi Kartı",
-    date: "Mart 2025",
-    channel: "Push",
-    openRate: 42,
-    conversion: 8.4,
-    result: "Başarılı",
-    insight: "Push kanalı SMS'in iki katı açılma oranı üretti (%42 vs %19).",
-  },
-  {
-    id: "pc2",
-    name: "Mevduat Faiz Kampanyası",
-    date: "Kasım 2024",
-    channel: "Mobil Banner",
-    openRate: 31,
-    conversion: 5.2,
-    result: "Başarılı",
-    insight: "Mobil ana ekran banner'ı e-postadan %3.4 kat daha yüksek CTR sağladı.",
-  },
-  {
-    id: "pc3",
-    name: "KOBİ İşletme Kredisi",
-    date: "Ocak 2025",
-    channel: "E-posta + Şube",
-    openRate: 17,
-    conversion: 3.1,
-    result: "Kısmi",
-    insight: "Legal onay süreci 6 iş günü sürdü; lansman 1 hafta gecikti.",
-  },
-  {
     id: "pc4",
     name: "Kira Öde Puan Kazan",
     date: "Eylül 2025",
@@ -276,6 +256,23 @@ export const pastCampaigns: PastCampaign[] = [
     conversion: 7.1,
     result: "Başarılı",
     insight: "18-30 segmentinde in-app story formatı dönüşümü %28 artırdı.",
+    details: {
+      objective: "Kira ödemelerini kredi kartına taşıyarak genç segmentte kart kullanımını artırmak",
+      segment: "18-30 yaş, kira ödeyen aktif mobil kullanıcılar (38.200 kişi)",
+      duration: "6 hafta · Eylül-Ekim 2025",
+      reach: "36.400 müşteriye ulaşıldı (%95 erişim)",
+      kpis: [
+        { label: "Push açılma", target: "%35", actual: "%38", hit: true },
+        { label: "Dönüşüm", target: "%6", actual: "%7,1", hit: true },
+        { label: "Yeni ürün adedi", target: "2.300", actual: "2.710", hit: true },
+      ],
+      learnings: [
+        "In-app story formatı 18-30 segmentinde dönüşümü %28 artırıyor — genç segment kampanyalarında standart destek kanalı yapıldı",
+        "Kira ödeme günü (ayın 1-5'i) gönderimleri, ay ortasına göre %19 daha yüksek etkileşim aldı",
+      ],
+      departments: ["CRM", "Pazarlama", "Veri Platformları"],
+      spark: [3.8, 4.6, 5.9, 6.8, 7.3, 7.1],
+    },
   },
   {
     id: "pc5",
@@ -286,6 +283,239 @@ export const pastCampaigns: PastCampaign[] = [
     conversion: 4.6,
     result: "Kısmi",
     insight: "55+ segmentte SMS hâlâ en güvenilir kanal; push opt-in oranı düşük.",
+    details: {
+      objective: "Emekli maaş müşterilerini promosyon teklifiyle bankaya taşımak",
+      segment: "55+ yaş, maaş hesabı başka bankada olan müşteriler (61.000 kişi)",
+      duration: "8 hafta · Haziran-Temmuz 2025",
+      reach: "54.200 müşteriye ulaşıldı (%89 erişim)",
+      kpis: [
+        { label: "SMS okunma", target: "%30", actual: "%24", hit: false },
+        { label: "Dönüşüm", target: "%5", actual: "%4,6", hit: false },
+        { label: "Maaş taşıma adedi", target: "3.000", actual: "2.780", hit: false },
+      ],
+      learnings: [
+        "55+ segmentte push opt-in %31'de kalıyor — bu kitleye SMS + çağrı merkezi kombinasyonu zorunlu",
+        "Çağrı merkezi destekli aramalar dönüşümü tek başına SMS'e göre 2,1 kat artırdı ama maliyetli — sadece yüksek değerli müşteriye uygulanmalı",
+      ],
+      departments: ["CRM", "Pazarlama", "Legal"],
+      spark: [2.1, 3.0, 3.8, 4.2, 4.5, 4.6],
+    },
+  },
+  {
+    id: "pc6",
+    name: "Konut Kredisi Ön Onay",
+    date: "Nisan 2025",
+    channel: "Push + Web",
+    openRate: 35,
+    conversion: 5.8,
+    result: "Başarılı",
+    insight: "Hesaplama ekranını kullananlara tetikli teklif, soğuk gönderimden 3 kat iyi dönüştü.",
+    details: {
+      objective: "Konut kredisi hesaplama ekranı kullanıcılarına ön onaylı teklif sunmak",
+      segment: "Son 30 günde hesaplama ekranını 2+ kez kullanan müşteriler (18.700 kişi)",
+      duration: "5 hafta · Nisan-Mayıs 2025",
+      reach: "17.900 müşteriye ulaşıldı (%96 erişim)",
+      kpis: [
+        { label: "Push açılma", target: "%30", actual: "%35", hit: true },
+        { label: "Başvuru dönüşümü", target: "%4", actual: "%5,8", hit: true },
+        { label: "Kullandırım hacmi", target: "₺850M", actual: "₺1.04Mr", hit: true },
+      ],
+      learnings: [
+        "Davranış tetikli gönderim (hesaplama ekranı kullanımı) soğuk listeye göre 3 kat dönüşüm üretiyor — tetikli kampanya standardı buradan doğdu",
+        "Ön onay tutarının mesajda açıkça yazılması tıklamayı %22 artırdı",
+      ],
+      departments: ["CRM", "Veri Platformları", "Pazarlama", "Legal"],
+      spark: [2.9, 4.1, 5.2, 5.9, 6.1, 5.8],
+    },
+  },
+  {
+    id: "pc1",
+    name: "Genç Segment Kredi Kartı",
+    date: "Mart 2025",
+    channel: "Push",
+    openRate: 42,
+    conversion: 8.4,
+    result: "Başarılı",
+    insight: "Push kanalı SMS'in iki katı açılma oranı üretti (%42 vs %19).",
+    details: {
+      objective: "Üniversite öğrencilerine ilk kredi kartını edindirme",
+      segment: "18-26 yaş, öğrenci belgeli mobil kullanıcılar (94.000 kişi)",
+      duration: "6 hafta · Mart-Nisan 2025",
+      reach: "88.500 müşteriye ulaşıldı (%94 erişim)",
+      kpis: [
+        { label: "Push açılma", target: "%30", actual: "%42", hit: true },
+        { label: "Dönüşüm", target: "%6", actual: "%8,4", hit: true },
+        { label: "Yeni kart adedi", target: "5.500", actual: "7.430", hit: true },
+      ],
+      learnings: [
+        "Push, genç segmentte SMS'in iki katı açılma üretiyor (%42 vs %19) — genç kampanyalarında ana kanal artık push",
+        "A/B testinde fayda odaklı metin, aciliyet odaklıdan %11 daha iyi performans gösterdi",
+      ],
+      departments: ["CRM", "Pazarlama", "Veri Platformları"],
+      spark: [4.2, 5.8, 7.1, 8.0, 8.6, 8.4],
+    },
+  },
+  {
+    id: "pc3",
+    name: "KOBİ İşletme Kredisi",
+    date: "Ocak 2025",
+    channel: "E-posta + Şube",
+    openRate: 17,
+    conversion: 3.1,
+    result: "Kısmi",
+    insight: "Legal onay süreci 6 iş günü sürdü; lansman 1 hafta gecikti.",
+    details: {
+      objective: "KOBİ'lere dönem sonu nakit akışı için işletme kredisi sunmak",
+      segment: "Yıllık cirosu 5-50M ₺ arası, POS kullanan işletmeler (12.300 firma)",
+      duration: "7 hafta · Ocak-Şubat 2025",
+      reach: "10.900 firmaya ulaşıldı (%89 erişim)",
+      kpis: [
+        { label: "E-posta açılma", target: "%25", actual: "%17", hit: false },
+        { label: "Dönüşüm", target: "%4", actual: "%3,1", hit: false },
+        { label: "Kullandırım hacmi", target: "₺600M", actual: "₺495M", hit: false },
+      ],
+      learnings: [
+        "Legal onayı 6 iş günü sürüp lansmanı 1 hafta geciktirdi — bu dersten sonra Legal görevi tüm kampanyalarda en yüksek öncelikle paralel açılıyor",
+        "KOBİ sahipleri e-postayı mesai saatinde açmıyor; şube ziyareti + mobil bildirim kombinasyonu önerildi",
+      ],
+      departments: ["CRM", "Legal", "Pazarlama"],
+      spark: [1.8, 2.2, 2.6, 3.0, 3.2, 3.1],
+    },
+  },
+  {
+    id: "pc7",
+    name: "Yeni Yıl Taksit Erteleme",
+    date: "Aralık 2024",
+    channel: "Push + SMS",
+    openRate: 29,
+    conversion: 4.2,
+    result: "Kısmi",
+    insight: "Yoğun kampanya döneminde bildirim yorgunluğu açılmayı %8 düşürdü.",
+    details: {
+      objective: "Yılbaşı harcamaları için kart taksit erteleme teklifi",
+      segment: "Aktif kredi kartı borcu olan, düzenli ödeme yapan müşteriler (142.000 kişi)",
+      duration: "4 hafta · Aralık 2024",
+      reach: "131.000 müşteriye ulaşıldı (%92 erişim)",
+      kpis: [
+        { label: "Açılma", target: "%33", actual: "%29", hit: false },
+        { label: "Dönüşüm", target: "%4,5", actual: "%4,2", hit: false },
+        { label: "Erteleme adedi", target: "6.000", actual: "5.500", hit: false },
+      ],
+      learnings: [
+        "Aralık ayında tüm bankalar kampanya yağdırıyor — bildirim yorgunluğu açılmayı %8 düşürdü; yoğun dönemde frekans limiti haftalık 2'ye indirildi",
+        "Erteleme teklifleri ayın son haftası (ekstre kesimi öncesi) 1,7 kat daha iyi dönüşüyor",
+      ],
+      departments: ["CRM", "Pazarlama", "Legal"],
+      spark: [3.1, 3.6, 4.4, 4.5, 4.0, 4.2],
+    },
+  },
+  {
+    id: "pc2",
+    name: "Mevduat Faiz Kampanyası",
+    date: "Kasım 2024",
+    channel: "Mobil Banner",
+    openRate: 31,
+    conversion: 5.2,
+    result: "Başarılı",
+    insight: "Mobil ana ekran banner'ı e-postadan %3.4 kat daha yüksek CTR sağladı.",
+    details: {
+      objective: "Vadesiz bakiyesi yüksek müşterileri vadeli mevduata yönlendirmek",
+      segment: "Vadesiz hesabında 30 gün+ süreyle 100K ₺ üstü tutan müşteriler (27.500 kişi)",
+      duration: "6 hafta · Kasım-Aralık 2024",
+      reach: "26.100 müşteriye ulaşıldı (%95 erişim)",
+      kpis: [
+        { label: "Banner CTR", target: "%25", actual: "%31", hit: true },
+        { label: "Dönüşüm", target: "%4", actual: "%5,2", hit: true },
+        { label: "Toplanan mevduat", target: "₺2Mr", actual: "₺2.6Mr", hit: true },
+      ],
+      learnings: [
+        "Mobil ana ekran banner'ı e-postanın 3,4 katı CTR üretti — birikim ürünlerinde ana kanal banner oldu",
+        "Faiz oranını banner'da açıkça göstermek BDDK duyuru şartına takıldı; 'size özel oran' formülü hem uyumlu hem etkili",
+      ],
+      departments: ["CRM", "Pazarlama", "Legal", "Veri Platformları"],
+      spark: [2.8, 3.9, 4.7, 5.3, 5.5, 5.2],
+    },
+  },
+  {
+    id: "pc8",
+    name: "Maaş Müşterisi Kazanımı",
+    date: "Şubat 2025",
+    channel: "Şube + SMS",
+    openRate: 21,
+    conversion: 3.9,
+    result: "Kısmi",
+    insight: "Promosyon tutarı tek başına yetmiyor; ek fayda paketi dönüşümü belirledi.",
+    details: {
+      objective: "Maaşını başka bankadan alan müşterileri promosyonla taşımak",
+      segment: "Bankada ürünü olup maaşı dışarıda olan müşteriler (88.000 kişi)",
+      duration: "8 hafta · Şubat-Mart 2025",
+      reach: "76.500 müşteriye ulaşıldı (%87 erişim)",
+      kpis: [
+        { label: "SMS okunma", target: "%28", actual: "%21", hit: false },
+        { label: "Dönüşüm", target: "%4", actual: "%3,9", hit: false },
+        { label: "Maaş taşıma", target: "3.500", actual: "3.420", hit: false },
+      ],
+      learnings: [
+        "Promosyon tutarı rakiplerle aynıysa fark yaratmıyor — kredi faiz indirimi + aidatsız kart içeren paket teklifi dönüşümü taşıdı",
+        "Şube yönlendirmeli akışta form doldurma terki %41 — dijital uçtan uca akış şart",
+      ],
+      departments: ["CRM", "Pazarlama", "Veri Platformları"],
+      spark: [2.4, 2.9, 3.5, 4.0, 4.1, 3.9],
+    },
+  },
+  {
+    id: "pc9",
+    name: "e-Ticaret POS Paketi",
+    date: "Mayıs 2025",
+    channel: "E-posta + Saha",
+    openRate: 19,
+    conversion: 2.4,
+    result: "Düşük",
+    insight: "Ürün-kitle uyumsuzluğu: hedef listede e-ticaret yapan işletme oranı %12'ydi.",
+    details: {
+      objective: "İşletmelere sanal POS + e-ticaret entegrasyon paketi satmak",
+      segment: "POS kullanan tüm KOBİ'ler (31.000 firma) — segment daraltılmadı",
+      duration: "6 hafta · Mayıs-Haziran 2025",
+      reach: "26.700 firmaya ulaşıldı (%86 erişim)",
+      kpis: [
+        { label: "E-posta açılma", target: "%25", actual: "%19", hit: false },
+        { label: "Dönüşüm", target: "%5", actual: "%2,4", hit: false },
+        { label: "Paket satışı", target: "1.500", actual: "640", hit: false },
+      ],
+      learnings: [
+        "Hedef listede fiilen e-ticaret yapan işletme oranı sadece %12'ydi — segment daraltılmadan gönderim yapmak dönüşümü yarıya düşürdü; artık segment odak skoru zorunlu kontrol",
+        "Saha ekibi ziyaretleri e-postadan 4 kat iyi dönüştü ama birim maliyet 9 kat — yalnızca yüksek cirolu firmalara uygulanmalı",
+      ],
+      departments: ["CRM", "Pazarlama", "Veri Platformları"],
+      spark: [1.6, 2.0, 2.5, 2.7, 2.3, 2.4],
+    },
+  },
+  {
+    id: "pc10",
+    name: "Bayram Alışveriş Kart Kampanyası",
+    date: "Mayıs 2024",
+    channel: "In-app",
+    openRate: 33,
+    conversion: 6.0,
+    result: "Başarılı",
+    insight: "Bayram öncesi 10 günlük dar pencere, yıl geneline göre 1,8 kat etkileşim üretti.",
+    details: {
+      objective: "Bayram alışverişinde kart harcamasını taksit avantajıyla artırmak",
+      segment: "Son 3 ayda market/giyim harcaması olan kart müşterileri (203.000 kişi)",
+      duration: "3 hafta · Mayıs 2024",
+      reach: "192.000 müşteriye ulaşıldı (%95 erişim)",
+      kpis: [
+        { label: "In-app etkileşim", target: "%28", actual: "%33", hit: true },
+        { label: "Dönüşüm", target: "%5", actual: "%6,0", hit: true },
+        { label: "Ek harcama hacmi", target: "₺1.2Mr", actual: "₺1.5Mr", hit: true },
+      ],
+      learnings: [
+        "Bayram öncesi 10 günlük dar pencere yıl ortalamasının 1,8 katı etkileşim üretiyor — dönemsel kampanyalar dar ve yoğun kurgulanmalı",
+        "Kategori bazlı kişiselleştirme (market vs giyim) genel mesaja göre %15 daha iyi dönüştü",
+      ],
+      departments: ["CRM", "Pazarlama", "Veri Platformları"],
+      spark: [3.5, 5.2, 6.4, 6.0, 5.8, 6.0],
+    },
   },
 ];
 
