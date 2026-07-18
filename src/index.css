@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  body {
+    @apply bg-navy-950 text-slate-200 font-sans;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(11, 42, 91, 0.55), transparent),
+      radial-gradient(ellipse 60% 40% at 90% 110%, rgba(47, 182, 166, 0.08), transparent);
+    background-attachment: fixed;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(47, 182, 166, 0.25);
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/[0.04] backdrop-blur-md border border-white/10 rounded-2xl;
+  }
+  .glass-hover {
+    @apply transition-all duration-300 hover:border-fteal/40 hover:shadow-glow-teal-sm;
+  }
+  .chip {
+    @apply px-3 py-1.5 rounded-full text-xs font-medium border border-white/10 bg-white/[0.05] text-slate-300 hover:border-fteal/50 hover:text-fteal-light transition-colors cursor-pointer;
+  }
+}
+
+/* Fütüristik pano: ince neon grid zemini */
+.cyber-grid {
+  background-image:
+    linear-gradient(rgba(47, 182, 166, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47, 182, 166, 0.045) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+/* Köşe braketli kart (HUD hissi) */
+.corner-card {
+  position: relative;
+}
+.corner-card::before,
+.corner-card::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: rgba(79, 216, 199, 0.55);
+  border-style: solid;
+  pointer-events: none;
+  transition: border-color 0.3s;
+}
+.corner-card::before {
+  top: -1px;
+  left: -1px;
+  border-width: 1.5px 0 0 1.5px;
+  border-top-left-radius: 6px;
+}
+.corner-card::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 1.5px 1.5px 0;
+  border-bottom-right-radius: 6px;
+}
+.corner-card:hover::before,
+.corner-card:hover::after {
+  border-color: rgba(79, 216, 199, 1);
+}
+
+/* AI İşliyor sütunu için tarama çizgisi */
+@keyframes scanline {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(420px);
+    opacity: 0;
+  }
+}
+.scan-col {
+  position: relative;
+  overflow: hidden;
+}
+.scan-col::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(47, 182, 166, 0.7), transparent);
+  animation: scanline 4s linear infinite;
+  pointer-events: none;
+}
+
+/* Diamond watermark pattern */
+.diamond-watermark {
+  position: relative;
+}
+.diamond-watermark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect x='45' y='45' width='30' height='30' rx='4' transform='rotate(45 60 60)' fill='none' stroke='%232FB6A6' stroke-opacity='0.05' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
