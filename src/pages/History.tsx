@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Archive, Check, ChevronDown, Landmark, Lightbulb, Target, Users, X } from "lucide-react";
+import { Archive, Check, ChevronDown, Info, Landmark, Lightbulb, Target, Users, X } from "lucide-react";
 import { Sparkline } from "../components/Sparkline";
 import { pastCampaigns, type PastCampaign } from "../data/mock";
 import { cn } from "../lib/utils";
@@ -33,11 +33,11 @@ function CampaignRow({ campaign, expanded, onToggle }: { campaign: PastCampaign;
           <div className="mt-0.5 text-xs text-slate-400">{campaign.insight}</div>
         </div>
         <div className="flex shrink-0 items-center gap-6 text-right">
-          <div>
+          <div title="Mesajı açan/tıklayan müşteri oranı">
             <div className="font-mono text-lg font-bold text-fteal-light">%{campaign.openRate}</div>
             <div className="text-[10px] text-slate-500">Açılma</div>
           </div>
-          <div>
+          <div title="Hedef aksiyonu (başvuru/satın alma) tamamlayan müşteri oranı">
             <div className="font-mono text-lg font-bold text-fgreen-light">%{campaign.conversion}</div>
             <div className="text-[10px] text-slate-500">Dönüşüm</div>
           </div>
@@ -129,6 +129,14 @@ export function HistoryPage() {
             return <button key={item} onClick={() => setFilter(item)} className={cn("rounded-full border px-2.5 py-1 text-[10px] transition", filter === item ? "border-fteal/30 bg-fteal/[.08] text-fteal-light" : "border-white/[.07] text-slate-500 hover:border-white/[.14] hover:text-slate-300")}>{item} <span className="font-mono text-[9px] opacity-70">{count}</span></button>;
           })}
         </div>
+      </div>
+
+      <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-fteal/15 bg-fteal/[.04] px-3.5 py-2.5 text-[11px] leading-4 text-slate-400">
+        <Info size={13} className="mt-0.5 shrink-0 text-fteal" />
+        <span>
+          <span className="font-semibold text-fteal-light">Açılma</span> — kampanya mesajı gönderilen müşterilerin mesajı açma/tıklama oranı; kanalın dikkat çekme gücünü ölçer (örn. 100.000 push gitti, 38.000'i açıldı → %38).{" "}
+          <span className="font-semibold text-fgreen-light">Dönüşüm</span> — ulaşılan müşteriler içinden kampanyanın hedeflediği aksiyonu (başvuru, satın alma, maaş taşıma…) tamamlayanların oranı; kampanyanın gerçek iş sonucunu ölçer. Açılma yüksek ama dönüşüm düşükse mesaj ilgi çekiyor fakat teklif ikna etmiyor demektir.
+        </span>
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">

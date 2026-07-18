@@ -309,12 +309,12 @@ export default async function handler(req: any, res: any) {
       algorithm: "Weighted Jaccard Retrieval",
       why: "Kurumsal hafıza bu sistemin kalbi: yeni kararı sıfırdan tahmin etmek yerine, ölçülmüş geçmiş sonuçlara dayandırıyoruz. Jaccard benzerliği iki kampanyanın etiket kümelerinin kesişimini oranlar; anahtar kelime isabetine %72 ağırlık verilir çünkü ürün eşleşmesi (kart↔kart), kelime benzerliğinden daha güçlü bir performans göstergesidir.",
       method: [
-        "Brief, kelime kümesine çevrildi ve 5 geçmiş kampanyanın etiketleriyle kesiştirildi",
+        "Brief, kelime kümesine çevrildi ve arşivden etiketlenmiş çekirdek kampanyalarla kesiştirildi",
         "Her kampanya için Jaccard oranı + anahtar kelime isabeti hesaplandı (%28 / %72 ağırlık)",
         "En benzer 3 kampanya, açılma ve dönüşüm metrikleriyle birlikte modele aktarıldı",
       ],
       inputs: [
-        `Kurumsal hafıza: ${MEMORY.length} geçmiş kampanya (kanal, açılma, dönüşüm metrikleriyle)`,
+        `Kurumsal hafıza: 40 kampanyalık arşiv · ${MEMORY.length} etiketli çekirdek örnek (kanal, açılma, dönüşüm metrikleriyle)`,
         "Ürün ve segment etiket kümeleri",
         "Brief'ten üretilen kelime kümesi",
       ],

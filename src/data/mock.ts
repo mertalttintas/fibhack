@@ -246,7 +246,7 @@ export const liveMetrics = [
 
 // ---- Organizational memory: geçmiş kampanyalar -----------------------------
 
-export const pastCampaigns: PastCampaign[] = [
+const coreCampaigns: PastCampaign[] = [
   {
     id: "pc4",
     name: "Kira Öde Puan Kazan",
@@ -518,6 +518,103 @@ export const pastCampaigns: PastCampaign[] = [
     },
   },
 ];
+
+// Arşivin geri kalanı: seed listesinden detayları türetilen 30 kampanya.
+type CampaignSeed = {
+  name: string; date: string; channel: string; openRate: number; conversion: number;
+  result: "Başarılı" | "Kısmi" | "Düşük"; insight: string;
+  objective: string; segment: string; reachK: number; weeks: number;
+};
+
+const CHANNEL_LESSONS: Record<string, string> = {
+  Push: "Push gönderiminde 20:00-21:00 aralığı gün içi ortalamadan daha yüksek açılma üretti",
+  "In-app": "In-app yerleşimlerde ilk ekran görünürlüğü, menü içi yerleşime göre belirgin fark yarattı",
+  SMS: "SMS'te 160 karakteri aşan mesajların okunma oranı ölçülebilir şekilde düştü",
+  "E-posta": "E-posta konu satırında kişiselleştirme, açılmayı çift haneli artırdı",
+  "Mobil Banner": "Banner kreatifinde tek mesaj + tek buton kuralı CTR'ı artırdı",
+  Şube: "Şube yönlendirmeli akışlarda randevu linki eklemek terk oranını azalttı",
+  "Çağrı Merkezi": "Çağrı listesi churn skoruyla önceliklendirilince erişim verimi arttı",
+};
+
+function buildPastCampaign(seed: CampaignSeed, index: number): PastCampaign {
+  const hit = seed.result === "Başarılı";
+  const partial = seed.result === "Kısmi";
+  const openTarget = Math.round(seed.openRate * (hit ? 0.88 : 1.12));
+  const convTarget = Number((seed.conversion * (hit ? 0.85 : partial ? 1.08 : 1.5)).toFixed(1));
+  const c = seed.conversion;
+  const spark = (hit ? [0.5, 0.68, 0.85, 1.02, 1.08, 1] : partial ? [0.55, 0.75, 0.95, 1.05, 0.98, 1] : [0.7, 0.95, 1.1, 1.0, 0.9, 1])
+    .map((k) => Number((c * k).toFixed(1)));
+  const mainChannel = seed.channel.split(" + ")[0];
+  const departments = ["CRM", "Pazarlama"];
+  if (/kredi|mevduat|faiz|sigorta|fon|puan/i.test(seed.name)) departments.push("Legal");
+  if (/Push|In-app|Banner/i.test(seed.channel)) departments.push("Veri Platformları");
+  return {
+    id: `pcx${index + 1}`,
+    name: seed.name,
+    date: seed.date,
+    channel: seed.channel,
+    openRate: seed.openRate,
+    conversion: seed.conversion,
+    result: seed.result,
+    insight: seed.insight,
+    details: {
+      objective: seed.objective,
+      segment: seed.segment,
+      duration: `${seed.weeks} hafta · ${seed.date}`,
+      reach: `~${Math.round(seed.reachK * 0.92)}.000 müşteriye ulaşıldı (%92 erişim)`,
+      kpis: [
+        { label: "Açılma", target: `%${openTarget}`, actual: `%${seed.openRate}`, hit: seed.openRate >= openTarget },
+        { label: "Dönüşüm", target: `%${convTarget}`, actual: `%${seed.conversion}`, hit: seed.conversion >= convTarget },
+        { label: "Erişim", target: "%88", actual: "%92", hit: true },
+      ],
+      learnings: [seed.insight, CHANNEL_LESSONS[mainChannel] ?? "Kanal karması sonuçlara göre bir sonraki kampanyada yeniden ağırlıklandırıldı"],
+      departments,
+      spark,
+    },
+  };
+}
+
+const extraSeeds: CampaignSeed[] = [
+  { name: "Okula Dönüş Genç Paketi", date: "Ağustos 2025", channel: "Push + In-app", openRate: 36, conversion: 6.4, result: "Başarılı", insight: "Kayıt haftasından 10 gün önce başlayan iletişim, hafta içine sıkışan kurguya göre daha iyi dönüştü.", objective: "Üniversiteye başlayan öğrencilere hesap + kart paketi", segment: "17-20 yaş, yeni kayıt dönemi kullanıcıları", reachK: 74, weeks: 4 },
+  { name: "Yaz Tatili Taksit Kampanyası", date: "Temmuz 2025", channel: "In-app", openRate: 31, conversion: 5.1, result: "Başarılı", insight: "Tatil kategorisinde harcaması olanlara tetikli teklif genel gönderimden 2,2 kat iyi dönüştü.", objective: "Tatil harcamalarında ek taksit teklifi", segment: "Son 60 günde seyahat/konaklama harcaması olanlar", reachK: 96, weeks: 5 },
+  { name: "Serbest Meslek Kredi Paketi", date: "Temmuz 2025", channel: "E-posta", openRate: 18, conversion: 2.9, result: "Kısmi", insight: "Serbest meslek segmentinde gelir belgesi adımı dönüşümün önündeki ana engel oldu.", objective: "Serbest çalışanlara esnek geri ödemeli kredi", segment: "Fatura kesen serbest meslek sahipleri", reachK: 22, weeks: 6 },
+  { name: "Altın Hesabı Birikim", date: "Haziran 2025", channel: "Mobil Banner", openRate: 28, conversion: 4.4, result: "Başarılı", insight: "Gram bazlı küçük birikim mesajı ('günde 1 gram') toplu yatırım mesajından iyi çalıştı.", objective: "Düzenli altın birikim talimatı açtırmak", segment: "Altın fiyat ekranını takip eden kullanıcılar", reachK: 58, weeks: 5 },
+  { name: "Babalar Günü Kart Harcama", date: "Haziran 2025", channel: "Push", openRate: 30, conversion: 4.9, result: "Kısmi", insight: "Hediye kategorisi tahmini bazı segmentlerde isabetsizdi; kategori modeli güncellendi.", objective: "Babalar Günü haftasında kart harcamasını artırmak", segment: "Aktif kart kullanıcıları", reachK: 150, weeks: 2 },
+  { name: "Çiftçi Destek Kredisi", date: "Mayıs 2025", channel: "Şube + SMS", openRate: 22, conversion: 3.6, result: "Kısmi", insight: "Tarım bölgelerinde SMS + şube araması kombinasyonu tek kanala göre belirgin fark yarattı.", objective: "Hasat öncesi dönemde işletme kredisi", segment: "Tarım sektörü kayıtlı işletme müşterileri", reachK: 18, weeks: 7 },
+  { name: "Anneler Günü Alışveriş", date: "Mayıs 2025", channel: "Push + In-app", openRate: 34, conversion: 6.2, result: "Başarılı", insight: "Son 3 gün hatırlatma dalgası toplam dönüşümün üçte birini tek başına üretti.", objective: "Anneler Günü haftasında kart kampanyası", segment: "Hediye kategorisi harcaması olan müşteriler", reachK: 168, weeks: 2 },
+  { name: "Dijital Onboarding Hoş Geldin", date: "Nisan 2025", channel: "In-app", openRate: 41, conversion: 7.8, result: "Başarılı", insight: "İlk 7 gün içinde verilen hoş geldin teklifi, 30. günden sonra verilene göre 3 kat iyi dönüştü.", objective: "Yeni dijital müşterileri ilk üründe aktive etmek", segment: "Son 30 günde uygulamaya kayıt olanlar", reachK: 42, weeks: 4 },
+  { name: "Ramazan Market Taksit", date: "Mart 2025", channel: "Push", openRate: 32, conversion: 5.7, result: "Başarılı", insight: "İftar saatine yakın gönderimler gün içi ortalamadan %24 daha yüksek açılma aldı.", objective: "Market harcamalarına ek taksit", segment: "Düzenli market harcaması olan kart müşterileri", reachK: 185, weeks: 4 },
+  { name: "Vergi Dönemi KOBİ Nakit", date: "Mart 2025", channel: "E-posta + Şube", openRate: 16, conversion: 2.6, result: "Düşük", insight: "Vergi haftasında işletmeler teklif değerlendirmeye vakit ayırmıyor — dönem 2 hafta öne çekilmeli.", objective: "Vergi ödemesi dönemi için köprü kredisi", segment: "KDV mükellefi KOBİ'ler", reachK: 26, weeks: 3 },
+  { name: "Kadınlar Günü Girişimci Kredisi", date: "Mart 2025", channel: "E-posta", openRate: 23, conversion: 3.8, result: "Kısmi", insight: "Başvuru formundaki teminat sorusu erken terk noktası oldu; adım sona taşındı.", objective: "Kadın girişimcilere avantajlı işletme kredisi", segment: "Kadın ortaklı işletme müşterileri", reachK: 14, weeks: 4 },
+  { name: "Sömestr Genç Harcama", date: "Şubat 2025", channel: "In-app", openRate: 35, conversion: 6.0, result: "Başarılı", insight: "Sinema/oyun kategorili teklifler genç segmentte genel teklife göre %31 iyi performans gösterdi.", objective: "Sömestr tatilinde genç kart kullanımı", segment: "18-24 yaş aktif kart kullanıcıları", reachK: 66, weeks: 3 },
+  { name: "Yılbaşı Mevduat Hoş Geldin Faizi", date: "Ocak 2025", channel: "Mobil Banner", openRate: 29, conversion: 4.7, result: "Başarılı", insight: "'İlk 3 ay özel oran' kurgusu süresiz orandan daha çok yeni müşteri getirdi.", objective: "Yeni yıl birikimlerini vadeliye çekmek", segment: "Vadesizde bakiye tutan müşteriler", reachK: 48, weeks: 5 },
+  { name: "Eğitim Sigortası Çapraz Satış", date: "Aralık 2024", channel: "Çağrı Merkezi", openRate: 15, conversion: 2.2, result: "Düşük", insight: "Sigorta ürünlerinde soğuk arama dönüşümü düşük — dijital ön ısıtma olmadan arama yapılmamalı.", objective: "Çocuklu ailelere eğitim sigortası", segment: "18 yaş altı çocuğu olan müşteriler", reachK: 31, weeks: 6 },
+  { name: "Black Friday Kart Kampanyası", date: "Kasım 2024", channel: "Push + In-app", openRate: 39, conversion: 7.2, result: "Başarılı", insight: "Saatlik kontenjanlı teklif kurgusu ('bu saat için 500 kişilik') etkileşimi rekor seviyeye taşıdı.", objective: "Black Friday haftasında kart harcaması", segment: "E-ticaret harcaması olan tüm kart müşterileri", reachK: 240, weeks: 1 },
+  { name: "Kış Lastiği Taksit Anlaşması", date: "Kasım 2024", channel: "SMS", openRate: 20, conversion: 3.3, result: "Kısmi", insight: "Anlaşmalı bayi listesinin mesaja eklenmesi tıklamayı artırdı ama bölgesel kapsam yetersizdi.", objective: "Kış lastiği alımında anlaşmalı taksit", segment: "Araç sahibi kart müşterileri", reachK: 92, weeks: 3 },
+  { name: "Cumhuriyet Bayramı Özel Mevduat", date: "Ekim 2024", channel: "Mobil Banner", openRate: 27, conversion: 4.3, result: "Başarılı", insight: "Dönemsel tema + sınırlı süre kombinasyonu standart mevduat mesajına göre iyi çalıştı.", objective: "Bayram haftası özel vadeli mevduat", segment: "Birikim eğilimli müşteriler", reachK: 55, weeks: 2 },
+  { name: "Okul Dönemi Veli Kredisi", date: "Eylül 2024", channel: "Push", openRate: 28, conversion: 4.5, result: "Kısmi", insight: "Okul taksit takvimiyle eşleşen geri ödeme planı talep gördü; tutar üst limiti dar kaldı.", objective: "Eğitim masrafları için taksitli kredi", segment: "Okul çağında çocuğu olan müşteriler", reachK: 84, weeks: 5 },
+  { name: "Üniversite Hoş Geldin Hesabı", date: "Eylül 2024", channel: "Push + In-app", openRate: 37, conversion: 6.8, result: "Başarılı", insight: "Kampüs bölgesi hedeflemesi şehir geneli hedeflemeye göre dönüşümü %26 artırdı.", objective: "Yeni üniversitelilere ücretsiz hesap paketi", segment: "18-21 yaş, kampüs bölgesi kullanıcıları", reachK: 51, weeks: 4 },
+  { name: "Yaz Sonu Döviz Vadeli", date: "Ağustos 2024", channel: "Push", openRate: 25, conversion: 4.0, result: "Kısmi", insight: "Kur sakinken döviz ürünü ilgisi düşüyor — kampanya volatilite dönemine planlanmalı.", objective: "Döviz birikimlerini vadeliye çekmek", segment: "Döviz hesabı olan müşteriler", reachK: 63, weeks: 4 },
+  { name: "Tatil Kredisi", date: "Temmuz 2024", channel: "E-posta", openRate: 14, conversion: 2.1, result: "Düşük", insight: "'Tatil için kredi' çerçevesi güven yaratmadı; 'esnek nakit' kurgusu sonraki dönemde daha iyi çalıştı.", objective: "Yaz tatili harcamaları için ihtiyaç kredisi", segment: "Yaz döneminde seyahat harcaması olanlar", reachK: 70, weeks: 4 },
+  { name: "Aidatsız Kart Geçişi", date: "Haziran 2024", channel: "SMS + Push", openRate: 30, conversion: 5.3, result: "Başarılı", insight: "Rakip kart aidat dönemine denk getirilen zamanlama kampanyanın ana başarı faktörüydü.", objective: "Rakip banka kartlılarını aidatsız karta geçirmek", segment: "Bankada hesabı olup kartı dışarıda olanlar", reachK: 88, weeks: 6 },
+  { name: "Konut Sigortası Çapraz", date: "Mayıs 2024", channel: "E-posta", openRate: 17, conversion: 2.7, result: "Kısmi", insight: "Konut kredisi müşterisine sigorta teklifi kredi kapanış anında sunulunca dönüşüm 2 kat arttı.", objective: "Konut kredili müşterilere konut sigortası", segment: "Aktif konut kredisi olan müşteriler", reachK: 25, weeks: 5 },
+  { name: "Emeklilik Fonu Otomatik Katılım", date: "Nisan 2024", channel: "Şube", openRate: 19, conversion: 3.0, result: "Kısmi", insight: "Şube görüşmesinde fon getiri simülasyonu gösterilen müşterilerde katılım belirgin arttı.", objective: "Bireysel emeklilik fonuna katılımı artırmak", segment: "30-45 yaş maaş müşterileri", reachK: 40, weeks: 8 },
+  { name: "Nevruz Bölgesel Kampanya", date: "Mart 2024", channel: "SMS", openRate: 21, conversion: 3.4, result: "Kısmi", insight: "Bölgesel içerik yerelleştirmesi genel içeriğe göre okunmayı artırdı; teklif derinliği yetersizdi.", objective: "Bölgesel bayram dönemi kart kampanyası", segment: "Seçili iller, aktif kart müşterileri", reachK: 47, weeks: 2 },
+  { name: "Şubat Kart Borç Transferi", date: "Şubat 2024", channel: "Push", openRate: 33, conversion: 5.9, result: "Başarılı", insight: "Ekstre kesiminden 3 gün önce gönderim, borç transfer teklifinde en verimli zamanlama oldu.", objective: "Rakip kart borcunu avantajlı faizle taşımak", segment: "Yüksek ekstre bakiyeli kart kullanıcıları", reachK: 76, weeks: 5 },
+  { name: "Yeni Yıl Fatura Talimatı", date: "Ocak 2024", channel: "In-app", openRate: 26, conversion: 4.1, result: "Başarılı", insight: "Tek tıkla talimat akışı, form doldurmalı akışa göre terk oranını yarıya indirdi.", objective: "Otomatik fatura ödeme talimatı açtırmak", segment: "Düzenli fatura ödeyen, talimatı olmayanlar", reachK: 120, weeks: 6 },
+  { name: "Aralık Altın Günleri", date: "Aralık 2023", channel: "Mobil Banner", openRate: 24, conversion: 3.7, result: "Kısmi", insight: "Fiziksel altın teslim seçeneği beklenmedik ilgi gördü; operasyon kapasitesi dar kaldı.", objective: "Yıl sonu altın hesabı açılışı", segment: "Birikim eğilimli mobil kullanıcılar", reachK: 52, weeks: 3 },
+  { name: "e-Fatura KOBİ Geçiş", date: "Kasım 2023", channel: "E-posta", openRate: 13, conversion: 1.9, result: "Düşük", insight: "Teknik ürünlerde e-posta tek başına yetersiz — mali müşavir kanalı üzerinden iletişim önerildi.", objective: "KOBİ'leri bankanın e-fatura çözümüne geçirmek", segment: "e-Fatura mükellefi KOBİ'ler", reachK: 29, weeks: 6 },
+  { name: "Maaş Avans Limiti", date: "Ekim 2023", channel: "Push", openRate: 29, conversion: 4.8, result: "Başarılı", insight: "Ay sonuna 5 gün kala gönderilen avans teklifi ay başı gönderimine göre 2,4 kat dönüştü.", objective: "Maaş müşterilerine hazır avans limiti tanımlamak", segment: "Düzenli maaş yatan müşteriler", reachK: 132, weeks: 4 },
+];
+
+const MONTH_ORDER: Record<string, number> = { Ocak: 1, Şubat: 2, Mart: 3, Nisan: 4, Mayıs: 5, Haziran: 6, Temmuz: 7, Ağustos: 8, Eylül: 9, Ekim: 10, Kasım: 11, Aralık: 12 };
+function dateKey(date: string) {
+  const [month, year] = date.split(" ");
+  return Number(year) * 100 + (MONTH_ORDER[month] ?? 0);
+}
+
+export const pastCampaigns: PastCampaign[] = [...coreCampaigns, ...extraSeeds.map(buildPastCampaign)]
+  .sort((a, b) => dateKey(b.date) - dateKey(a.date));
 
 export const memoryBanner = {
   title: "Organizational Memory Önerisi",
@@ -855,7 +952,7 @@ function demoTrace(offsetMinutes: number, memoryDetail: string, channelDetail: s
     { id: "intake", label: "Kampanya girdisi ayrıştırıldı", detail: "Amaç ve ürün terimleri çıkarıldı", status: "done", timestamp: at(0), algorithm: "Lexical intent parser v2", why: "Serbest metni doğrudan modele vermek yerine önce yapılandırıyoruz: hangi analizlerin çalışacağı ve hangi referans havuzunun kullanılacağı burada belirlenir. İlk aşamadaki yanlış ayrıştırma zincirdeki her kararı saptıracağı için deterministik bir sözlük ayrıştırıcısı tercih edildi.", method: ["Brief normalize edildi (küçük harf, noktalama temizliği)", "Ürün, segment ve kanal terimleri banka terim sözlüğüyle eşleştirildi", "Çıkan terimler sonraki 6 analiz aşamasına parametre olarak geçildi"], inputs: ["Onaylanan kampanya brief'i — amaç, hedef kitle, kanallar, zamanlama ve KPI alanlarıyla"], outputs: ["Ürün, segment ve kanal terim seti çıkarıldı"], meaning: "Brief makine tarafından işlenebilir hale geldi; sonraki tüm aşamalar bu terim setini kullanacak." },
     { id: "segment", label: "Segment sinyalleri çıkarıldı", detail: "Hedef kitle sinyalleri brief'ten doğrulandı", status: "done", timestamp: at(1), algorithm: "Kural tabanlı segment sınıflandırıcı", why: "Kanal skoru ve CRM veri talebi hedef kitleye göre tamamen değişir. Makine öğrenmesi yerine kural tabanlı sınıflandırıcı kullanıyoruz çünkü sonuç deterministik, denetlenebilir ve mevzuat denetiminde savunulabilir olmalı.", method: ["Yaş, eğitim ve işletme kalıpları kurallarla tarandı", "Davranış kelimeleri (kira, ödeme, mobil) segment profiline eklendi", "Eşleşme yoksa 'geniş taban' işaretlenip insan netleştirmesi önerilir"], inputs: ["Intake aşamasından gelen terim seti", "Yaş/eğitim/işletme kural kalıpları"], outputs: ["Segment profili çıkarıldı ve doğrulandı"], score: 86, meaning: "Segment tanımı net — hedefleme kriterleri doğrudan CRM filtresine çevrilebilir." },
     { id: "signals", label: "Talep sinyalleri tarandı", detail: signalDetail, status: "done", timestamp: at(2), algorithm: "Momentum sinyal eşleştirici", why: "Kampanya kararını varsayıma değil, müşterilerin uygulamada bugün fiilen ne aradığına dayandırıyoruz. Eşleştirici arama hacmini ve 30 günlük artış hızını birlikte tartar; böylece küçük ama hızla büyüyen talep de gözden kaçmaz.", method: ["Brief terimleri 12 arama teriminin etiketleriyle eşleştirildi", "Eşleşen aramaların hacmi ve 30 günlük değişimi toplandı", "Ekran kullanım artışları destek sinyali olarak eklendi", "Hacim + ivme ağırlıklandırılıp 0-100 momentum skoru üretildi"], inputs: ["Mobil arama günlüğü: 12 terim, 24.6K aylık sorgu", "8 ekran kullanım metriği"], outputs: [signalDetail], score: signalScore, meaning: `Momentum ${signalScore}/100: talep organik olarak mevcut — kampanya bu aramayı yakalayacak şekilde konumlanmalı.` },
-    { id: "memory", label: "Benzer kampanyalar sıralandı", detail: memoryDetail, status: "done", timestamp: at(3), algorithm: "Weighted Jaccard Retrieval", why: "Kurumsal hafıza bu sistemin kalbi: yeni kararı sıfırdan tahmin etmek yerine ölçülmüş geçmiş sonuçlara dayandırıyoruz. Anahtar kelime isabetine %72 ağırlık verilir çünkü ürün eşleşmesi kelime benzerliğinden daha güçlü bir performans göstergesidir.", method: ["Brief kelime kümesine çevrilip 5 geçmiş kampanyayla kesiştirildi", "Jaccard oranı + anahtar kelime isabeti hesaplandı (%28/%72)", "En benzer 3 kampanya performans metrikleriyle modele aktarıldı"], inputs: ["Kurumsal hafıza: 5 geçmiş kampanya (kanal, açılma, dönüşüm)", "Ürün ve segment etiket kümeleri"], outputs: [memoryDetail], score: memoryScore, meaning: `En yakın geçmiş örneğin ölçülmüş sonuçları (%${memoryScore} benzerlik) yeni karar için referans alındı.` },
+    { id: "memory", label: "Benzer kampanyalar sıralandı", detail: memoryDetail, status: "done", timestamp: at(3), algorithm: "Weighted Jaccard Retrieval", why: "Kurumsal hafıza bu sistemin kalbi: yeni kararı sıfırdan tahmin etmek yerine ölçülmüş geçmiş sonuçlara dayandırıyoruz. Anahtar kelime isabetine %72 ağırlık verilir çünkü ürün eşleşmesi kelime benzerliğinden daha güçlü bir performans göstergesidir.", method: ["Brief kelime kümesine çevrilip arşivdeki etiketli kampanyalarla kesiştirildi", "Jaccard oranı + anahtar kelime isabeti hesaplandı (%28/%72)", "En benzer 3 kampanya performans metrikleriyle modele aktarıldı"], inputs: ["Kurumsal hafıza: 40 kampanyalık arşiv (kanal, açılma, dönüşüm)", "Ürün ve segment etiket kümeleri"], outputs: [memoryDetail], score: memoryScore, meaning: `En yakın geçmiş örneğin ölçülmüş sonuçları (%${memoryScore} benzerlik) yeni karar için referans alındı.` },
     { id: "channels", label: "Kanal alternatifleri skorlandı", detail: channelDetail, status: "done", timestamp: at(4), algorithm: "Ağırlıklı MCDA kanal skoru", why: "Tek metriğe güvenmek yanıltır: geçmişte iyi çalışan kanal bu segmente uymayabilir ya da mevzuata takılabilir. Çok kriterli karar analizi dört boyutu tek skora indirger; her kanala aynı formül uygulanır — kayırma yok, tekrarlanabilirlik var.", method: ["5 kanal 4 boyutta puanlandı: performans, segment uyumu, uygunluk, hazırlık", "Segment uyumu 2. aşamadaki profile göre kanala özel ayarlandı", "Boyutlar %45/%30/%15/%10 ağırlıkla birleştirildi", "İlk 2 kanal ana + destek olarak önerildi"], inputs: ["Geçmiş kanal performans matrisi (%45)", "Segment-kanal uyum profili (%30)", "Mevzuat uygunluğu (%15)", "Operasyonel hazırlık (%10)"], outputs: [channelDetail], score: channelScore, meaning: `En yüksek skorlu kanal ana kanal olarak önerildi (${channelScore}/100); ikinci kanal destek olarak eklendi.` },
     { id: "timing", label: "Zamanlama & mevsimsellik analizi", detail: timingDetail, status: "done", timestamp: at(5), algorithm: "Seasonal window scorer", why: "Aynı kampanya doğru haftada açıldığında bambaşka sonuç verir — geçmişte kayıt dönemi kaçırıldığı için bir kampanya hedefin altında kalmıştı. Skorlayıcı, kampanya temasını dönemsel takvimle eşleştirip lansman penceresinin gücünü puanlar.", method: ["Kampanya teması dönemsel olay takvimiyle eşleştirildi", "Talep sinyali ivmesi pencere gücüne kanıt olarak eklendi", "Maaş döngüsü ve push frekans limiti kısıt olarak işlendi"], inputs: ["Kampanya teması ve segment profili", "Dönemsel olay takvimi (kayıt/vergi/maaş/kur)"], outputs: [`Önerilen pencere: ${timingDetail}`, "Haftalık push frekans limiti: 2 bildirim"], score: timingScore, meaning: `Pencere skoru ${timingScore}/100: lansman doğru döneme denk geliyor — zamanlama kritik başarı faktörü.` },
     { id: "rules", label: "Risk ve uygunluk kuralları çalıştı", detail: "BDDK iletişim kontrolü · KVKK izinli iletişim kontrolü", status: "done", timestamp: at(6), algorithm: "Deterministic compliance ruleset", why: "Mevzuat kontrolü asla üretken modele bırakılmaz: BDDK ve KVKK kuralları yoruma açık olmamalı, her çalıştırmada aynı sonucu vermelidir. Model yalnızca bu motorun bulgularını görev planına işler.", method: ["Ürün türü mevzuat kural tablosuyla eşleştirildi", "Müşteri verisi kullanımı KVKK gereklilikleriyle kontrol edildi", "Tetiklenen kurallar Legal paketine zorunlu madde olarak eklendi"], inputs: ["Ürün türü ve teklif yapısı", "Müşteri veri alanları", "Planlanan kanallar"], outputs: ["Tetiklenen kontrol: BDDK iletişim ve ürün koşulu", "Tetiklenen kontrol: KVKK izinli iletişim"], score: 78, meaning: "2 kontrol tetiklendi — Legal görevi diğer işlerle paralel ve erken başlatılmalı (Ocak 2025'teki 6 günlük gecikme dersi)." },
