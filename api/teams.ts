@@ -33,6 +33,47 @@ export default async function handler(req: any, res: any) {
   const webhook = (process.env[ENV_KEYS[department]] || process.env.TEAMS_WEBHOOK_URL || "").trim();
   if (!webhook) return res.status(200).json({ delivered: false, reason: "no_webhook", channel });
 
+  // Slack webhook desteği: URL'den algılanır, Block Kit formatında gönderilir.
+  // Kurumsal tarafta aynı env değişkenine Teams Workflows URL'si konabilir.
+  if (webhook.includes("hooks.slack.com")) {
+    const blocks: any[] = [
+      { type: "header", text: { type: "plain_text", text: "🤖 Team-bot görev paketi", emoji: true } },
+      { type: "section", text: { type: "mrkdwn", text: `Merhaba *${department}* ekibi — onaylanan kampanya için yeni görev paketi yönlendirildi.` } },
+      { type: "section", text: { type: "mrkdwn", text: `*${title}*${typeof summary === "string" && summary ? `\n${summary}` : ""}`.slice(0, 2900) } },
+      { type: "section", fields: [
+        { type: "mrkdwn", text: `*Öncelik:*\n${typeof priority === "string" ? priority : "-"}` },
+        { type: "mrkdwn", text: `*Hedef kanal:*\n${channel}` },
+      ] },
+    ];
+    if (typeof rationale === "string" && rationale) {
+      blocks.push({ type: "section", text: { type: "mrkdwn", text: `*Karar gerekçesi:* ${rationale}`.slice(0, 2900) } });
+    }
+    if (draft?.headline && Array.isArray(draft.items)) {
+      blocks.push({ type: "divider" });
+      blocks.push({ type: "section", text: { type: "mrkdwn", text: `*✨ AI ön çalışması — ${draft.headline}*`.slice(0, 2900) } });
+      for (const item of draft.items.slice(0, 4)) {
+        if (item?.title && item?.content) {
+          blocks.push({ type: "section", text: { type: "mrkdwn", text: `• *${item.title}:* ${item.content}`.slice(0, 2900) } });
+        }
+      }
+    }
+    blocks.push({ type: "actions", elements: [{ type: "button", text: { type: "plain_text", text: "Görev panosunu aç", emoji: true }, url: BOARD_URL }] });
+    blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: "AI Kampanya Orkestratörü · insan onayı olmadan yayına çıkmaz" }] });
+
+    try {
+      const response = await fetch(webhook, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: `Team-bot görev paketi: ${title}`, blocks }),
+      });
+      if (!response.ok) throw new Error(`slack ${response.status}`);
+      return res.status(200).json({ delivered: true, channel, via: "slack" });
+    } catch (error: any) {
+      console.error("slack webhook error:", error?.message ?? error);
+      return res.status(200).json({ delivered: false, reason: "webhook_failed", channel });
+    }
+  }
+
   const body: any[] = [
     { type: "TextBlock", text: "🤖 Team-bot görev paketi", weight: "Bolder", color: "Accent" },
     { type: "TextBlock", text: `Merhaba ${department} ekibi — onaylanan kampanya için yeni görev paketi yönlendirildi.`, isSubtle: true, wrap: true, spacing: "None" },
