@@ -24,6 +24,7 @@ import {
   Zap,
 } from "lucide-react";
 import { statusColumns, type CampaignJob, type DeptCard, type DeptTask, type TaskStatus, type TraceEvent } from "../data/mock";
+import { ProcessingTheater } from "../components/ProcessingTheater";
 import { cn } from "../lib/utils";
 
 const DEPARTMENTS = ["CRM", "Veri Platformları", "Legal", "Pazarlama"] as const;
@@ -137,6 +138,7 @@ export function TaskBoard({ tasks, campaigns, onAdvance, onUpdateCampaign, onCom
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>();
   const [selectedTask, setSelectedTask] = useState<DeptTask | null>(null);
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
+  const [theater, setTheater] = useState<"live" | "replay" | null>(null);
   const [trace, setTrace] = useState<TraceEvent[]>([]);
   const [selectedTraceId, setSelectedTraceId] = useState<string>();
   const traceRef = useRef<TraceEvent[]>([]);
@@ -155,6 +157,7 @@ export function TaskBoard({ tasks, campaigns, onAdvance, onUpdateCampaign, onCom
   const processCampaign = async (campaign: CampaignJob) => {
     traceRef.current = [];
     setTrace([]);
+    setTheater("live");
     onUpdateCampaign(campaign.id, { status: "processing", trace: [] });
     try {
       const approvedBrief = `${campaign.brief.title}\nAmaç: ${campaign.brief.objective}\nHedef segment: ${campaign.brief.segment}\nKanallar: ${campaign.brief.channels}\nZamanlama: ${campaign.brief.timing}\nKPI: ${campaign.brief.kpi}`;
@@ -211,8 +214,8 @@ export function TaskBoard({ tasks, campaigns, onAdvance, onUpdateCampaign, onCom
             <div><div className="mb-4 flex items-start justify-between gap-4"><div><div className="flex items-center gap-2"><span className="font-mono text-[9px] uppercase tracking-wider" style={{ color: CAMPAIGN_STATE[active.status].color }}>{CAMPAIGN_STATE[active.status].label}</span>{typeof active.score === "number" && <span className="rounded-md border border-fgreen/20 bg-fgreen/[.05] px-1.5 py-0.5 font-mono text-[8px] text-fgreen-light">başarı skoru {active.score}/100</span>}</div><h2 className="mt-2 text-xl font-semibold leading-7 text-white">{active.title}</h2><p className="mt-2 text-[10px] leading-5 text-slate-500">{active.brief.objective}</p></div></div><div className="mb-3 grid grid-cols-2 gap-2"><div className="rounded-xl border border-white/[.055] bg-white/[.02] p-2.5"><div className="text-[7px] uppercase tracking-wider text-slate-700">Hedef segment</div><div className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-400">{active.brief.segment}</div></div><div className="rounded-xl border border-white/[.055] bg-white/[.02] p-2.5"><div className="text-[7px] uppercase tracking-wider text-slate-700">Başarı ölçütü</div><div className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-400">{active.brief.kpi}</div></div></div><NeuralCore active={active.status === "processing"} />
               {active.status === "pending" && <button onClick={() => processCampaign(active)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fteal to-fgreen py-3 text-sm font-bold text-[#061426] shadow-glow-teal-sm"><Zap size={15} /> AI ile işle</button>}
               {active.status === "error" && <button onClick={() => processCampaign(active)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-coral/25 bg-coral/[.06] py-3 text-sm font-semibold text-coral"><RotateCcw size={14} /> Yeniden dene</button>}
-              {active.status === "processing" && <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-fteal/15 bg-fteal/[.045] py-3 text-xs text-fteal-light"><LoaderCircle size={14} className="animate-spin" /> Karar motoru çalışıyor</div>}
-              {active.status === "completed" && <div className="mt-4 rounded-xl border border-fgreen/15 bg-fgreen/[.045] p-3"><div className="flex items-center gap-2 text-[10px] font-semibold text-fgreen-light"><ShieldCheck size={12} /> 4 departmana dağıtıldı</div><p className="mt-1.5 text-[10px] leading-4 text-slate-500">{active.summary}</p><div className="mt-2 font-mono text-[8px] text-slate-700">{PROVIDER[active.provider ?? ""] ?? active.provider} · {active.model}</div></div>}
+              {active.status === "processing" && <button onClick={() => setTheater("live")} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-fteal/15 bg-fteal/[.045] py-3 text-xs text-fteal-light transition hover:bg-fteal/[.09]"><LoaderCircle size={14} className="animate-spin" /> Karar motoru çalışıyor — canlı izle</button>}
+              {active.status === "completed" && <div className="mt-4 rounded-xl border border-fgreen/15 bg-fgreen/[.045] p-3"><div className="flex items-center gap-2 text-[10px] font-semibold text-fgreen-light"><ShieldCheck size={12} /> 4 departmana dağıtıldı</div><p className="mt-1.5 text-[10px] leading-4 text-slate-500">{active.summary}</p><div className="mt-2 flex items-center justify-between"><span className="font-mono text-[8px] text-slate-700">{PROVIDER[active.provider ?? ""] ?? active.provider} · {active.model}</span>{active.trace.length > 0 && <button onClick={() => setTheater("replay")} className="flex items-center gap-1 rounded-md border border-fteal/25 bg-fteal/[.06] px-2 py-1 text-[9px] font-semibold text-fteal-light transition hover:bg-fteal/10"><Zap size={9} /> Analiz akışını izle</button>}</div></div>}
             </div>
             <div className="grid gap-3 lg:grid-cols-[.9fr_1.1fr]"><div className="max-h-[430px] overflow-y-auto rounded-2xl border border-white/[.06] bg-[#061426]/80 p-3"><div className="mb-3 flex items-center justify-between border-b border-white/[.06] pb-3"><div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[.16em] text-slate-400"><BrainCircuit size={12} className="text-fteal" /> Canlı akış</div><span className="font-mono text-[7px] text-slate-700">SSE TRACE</span></div><Trace events={trace} processing={active.status === "processing"} selectedId={selectedTraceId} onSelect={setSelectedTraceId} /></div><div><div className="flex items-center gap-2 px-1 text-[8px] font-semibold uppercase tracking-[.16em] text-slate-600"><Fingerprint size={10} /> Açıklanabilir karar detayı</div><AlgorithmInspector event={selectedTrace} /></div></div>
           </div></div>}
@@ -229,6 +232,7 @@ export function TaskBoard({ tasks, campaigns, onAdvance, onUpdateCampaign, onCom
       </section>
       <div className="mt-4 flex items-center justify-center gap-2 text-[9px] text-slate-700"><ShieldCheck size={10} /> Gizli düşünce zinciri değil; gerçek sistem olayları, kaynaklar ve kullanıcıya açık karar gerekçeleri gösterilir.</div>
       <AnimatePresence>{selectedTask && <TaskDrawer task={selectedTask} onClose={() => setSelectedTask(null)} onAdvance={() => { onAdvance(selectedTask.id); setSelectedTask(null); }} />}</AnimatePresence>
+      <AnimatePresence>{theater && active && <ProcessingTheater title={active.title} events={trace} status={active.status} mode={theater} onClose={() => setTheater(null)} />}</AnimatePresence>
     </div>
   );
 }
