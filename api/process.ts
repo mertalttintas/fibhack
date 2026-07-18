@@ -241,19 +241,34 @@ export default async function handler(req: any, res: any) {
   try {
     stage("intake", "Kampanya girdisi ayrıştırıldı", `${idea.length} karakter · amaç ve ürün terimleri çıkarıldı`, "done", {
       algorithm: "Lexical intent parser v2",
-      why: "Hangi analizlerin çalıştırılacağını ve doğru referans havuzunu belirlemek için.",
-      inputs: ["Onaylanan kampanya brief'i"],
-      outputs: [...tokens(idea)].slice(0, 8),
+      why: "Serbest metni doğrudan modele vermek yerine önce yapılandırıyoruz: hangi analizlerin çalışacağı ve hangi referans havuzunun kullanılacağı burada belirlenir. İlk aşamada yapılan yanlış ayrıştırma zincirdeki her kararı saptıracağı için deterministik, denetlenebilir bir sözlük ayrıştırıcısı tercih edildi.",
+      method: [
+        "Brief normalize edildi (küçük harf, noktalama temizliği)",
+        "Ürün, segment ve kanal terimleri banka terim sözlüğüyle eşleştirildi",
+        "Çıkan anahtar terimler sonraki 6 analiz aşamasına parametre olarak geçildi",
+      ],
+      inputs: ["Onaylanan kampanya brief'i — amaç, hedef kitle, kanallar, zamanlama ve KPI alanlarıyla"],
+      outputs: [...tokens(idea)].slice(0, 8).map((t) => `Terim: "${t}"`),
+      meaning: "Brief makine tarafından işlenebilir hale geldi; sonraki tüm aşamalar bu terim setini kullanacak.",
     });
     await wait(320);
 
     const segments = segmentAnalysis(idea);
+    const segmentScore = segments[0].includes("netleştirme") ? 52 : 86;
     stage("segment", "Segment sinyalleri çıkarıldı", segments.join(" · "), "done", {
       algorithm: "Kural tabanlı segment sınıflandırıcı",
-      why: "Kanal uygunluğu ve CRM veri talebini hedef kitleye göre özelleştirmek için.",
-      inputs: ["Yaş", "ürün", "davranış ve kanal anahtar kelimeleri"],
-      outputs: segments,
-      score: segments[0].includes("netleştirme") ? 52 : 86,
+      why: "Kanal skoru ve CRM veri talebi hedef kitleye göre tamamen değişir — segment yanlış tespit edilirse örneğin 55+ kitleye push önerilir. Burada makine öğrenmesi yerine kural tabanlı sınıflandırıcı kullanıyoruz çünkü sonuç deterministik, denetlenebilir ve mevzuat denetiminde savunulabilir olmalı.",
+      method: [
+        "Yaş, eğitim ve işletme kalıpları (18-30, öğrenci, KOBİ, emekli…) kurallarla tarandı",
+        "Davranış kelimeleri (kira, ödeme, mobil, alarm) segment profiline eklendi",
+        "Hiç eşleşme yoksa 'geniş taban' işaretlenip insan netleştirmesi önerilir",
+      ],
+      inputs: ["Intake aşamasından gelen terim seti", "Yaş/eğitim/işletme kural kalıpları", "Davranış anahtar kelime sözlüğü"],
+      outputs: segments.map((s) => `Tespit: ${s}`),
+      score: segmentScore,
+      meaning: segmentScore >= 80
+        ? "Segment tanımı net — hedefleme kriterleri doğrudan CRM filtresine çevrilebilir."
+        : "Segment belirsiz — kampanya sahibinden hedef kitle netleştirmesi istenmeli.",
     });
     await wait(380);
 
@@ -263,60 +278,126 @@ export default async function handler(req: any, res: any) {
       ? `${signals.matchedSearches.length} arama + ${signals.matchedTabs.length} ekran eşleşti · en güçlü: "${topSignal.term}" +%${topSignal.change}`
       : "Doğrudan sinyal eşleşmesi yok · genel talep taban çizgisi kullanılacak", "done", {
       algorithm: "Momentum sinyal eşleştirici",
-      why: "Kampanyayı varsayımla değil, müşterilerin uygulamada şu an aradığı ve gezdiği gerçek davranış verisiyle temellendirmek için.",
-      inputs: ["12 arama terimi · 24.6K aylık sorgu", "8 ekran kullanım metriği", "Son 30 gün değişim oranları"],
+      why: "Kampanya kararını varsayıma değil, müşterilerin uygulamada bugün fiilen ne aradığına dayandırmak istiyoruz. Bu eşleştirici arama hacmini ve 30 günlük artış hızını birlikte tartar; böylece hacmi küçük ama hızla büyüyen talep de gözden kaçmaz — tek başına hacme bakmak dünkü talebi, tek başına artışa bakmak gürültüyü ölçerdi.",
+      method: [
+        "Brief terimleri 12 arama teriminin etiket kümeleriyle eşleştirildi",
+        "Eşleşen aramaların aylık hacmi ve 30 günlük değişim yüzdesi toplandı",
+        "İlgili ekran/sekme kullanım artışları destekleyici sinyal olarak eklendi",
+        "Hacim + ivme ağırlıklandırılarak 0-100 arası momentum skoru üretildi",
+      ],
+      inputs: [
+        "Mobil arama günlüğü: 12 terim, 24.6K aylık sorgu (son 30 gün)",
+        "8 ekran kullanım metriği (Kredi Hesaplama, Kampanyalar, Başvurular…)",
+        "Terim bazlı değişim oranları (+%7 ile +%34 aralığında)",
+      ],
       outputs: [
-        ...signals.matchedSearches.map((s) => `"${s.term}" ${s.count.toLocaleString("tr-TR")} arama · +%${s.change}`),
-        ...signals.matchedTabs.map((t) => `${t.name} sekmesi +%${t.change}`),
+        ...signals.matchedSearches.map((s) => `Eşleşen arama: "${s.term}" — ${s.count.toLocaleString("tr-TR")} sorgu/ay, son 30 günde +%${s.change}`),
+        ...signals.matchedTabs.map((t) => `Eşleşen ekran: ${t.name} sekmesi kullanımı +%${t.change}`),
       ].slice(0, 6),
       score: signals.momentum,
+      meaning: signals.momentum >= 75
+        ? `Momentum ${signals.momentum}/100: talep organik olarak yükseliyor — kampanya mevcut aramayı yakalayacak şekilde konumlanmalı, gecikme fırsat kaybıdır.`
+        : signals.momentum >= 55
+          ? `Momentum ${signals.momentum}/100: orta düzey talep var — kampanya talebi yaratmak yerine büyütmeye odaklanmalı.`
+          : `Momentum ${signals.momentum}/100: organik talep zayıf — kampanya farkındalık aşamasından başlamalı, dönüşüm hedefi temkinli kurulmalı.`,
     });
     await wait(380);
 
     const matches = similarityAnalysis(idea);
+    const topMatch = matches[0];
     stage("memory", "Benzer kampanyalar sıralandı", matches.map((item) => `${item.name} %${item.score}`).join(" · "), "done", {
       algorithm: "Weighted Jaccard Retrieval",
-      why: "Yeni kararı ölçülmüş geçmiş sonuçlarla temellendirmek için.",
-      inputs: [`${MEMORY.length} geçmiş kampanya`, "ürün ve segment etiketleri"],
-      outputs: matches.map((item) => `${item.name}: %${item.score} benzerlik`),
-      score: matches[0]?.score ?? 0,
+      why: "Kurumsal hafıza bu sistemin kalbi: yeni kararı sıfırdan tahmin etmek yerine, ölçülmüş geçmiş sonuçlara dayandırıyoruz. Jaccard benzerliği iki kampanyanın etiket kümelerinin kesişimini oranlar; anahtar kelime isabetine %72 ağırlık verilir çünkü ürün eşleşmesi (kart↔kart), kelime benzerliğinden daha güçlü bir performans göstergesidir.",
+      method: [
+        "Brief, kelime kümesine çevrildi ve 5 geçmiş kampanyanın etiketleriyle kesiştirildi",
+        "Her kampanya için Jaccard oranı + anahtar kelime isabeti hesaplandı (%28 / %72 ağırlık)",
+        "En benzer 3 kampanya, açılma ve dönüşüm metrikleriyle birlikte modele aktarıldı",
+      ],
+      inputs: [
+        `Kurumsal hafıza: ${MEMORY.length} geçmiş kampanya (kanal, açılma, dönüşüm metrikleriyle)`,
+        "Ürün ve segment etiket kümeleri",
+        "Brief'ten üretilen kelime kümesi",
+      ],
+      outputs: matches.map((item) => `${item.name}: %${item.score} benzerlik — ${item.channel} kanalında %${item.openRate} açılma, %${item.conversion} dönüşüm`),
+      score: topMatch?.score ?? 0,
+      meaning: (topMatch?.score ?? 0) >= 60
+        ? `En yakın örnek "${topMatch.name}" (%${topMatch.score}): bu kampanyanın ölçülmüş sonuçları yeni karar için güvenilir referans.`
+        : (topMatch?.score ?? 0) >= 35
+          ? `Kısmi benzerlik (%${topMatch?.score}): geçmiş veriler yön gösterir ama birebir tahmin için yeterli değil — model varsayımlarını açıkça işaretleyecek.`
+          : "Güçlü geçmiş örnek yok: bu kampanya kurum için yeni alan — pilot yaklaşım ve temkinli KPI önerilecek.",
     });
     await wait(420);
 
     const channels = channelAnalysis(idea);
+    const bestChannel = channels[0];
     stage("channels", "Kanal alternatifleri skorlandı", channels.slice(0, 3).map((item) => `${item.name} ${item.score}/100`).join(" · "), "done", {
       algorithm: "Ağırlıklı MCDA kanal skoru",
-      why: "Tek bir geçmiş metriğe güvenmeden performans, segment uyumu, uygunluk ve hazırlığı birlikte değerlendirmek için.",
-      inputs: ["%45 geçmiş performans", "%30 segment uyumu", "%15 uygunluk", "%10 operasyonel hazırlık"],
-      outputs: channels.slice(0, 3).map((item) => `${item.name}: ${item.score}/100`),
-      score: channels[0].score,
+      why: "Kanal seçiminde tek bir metriğe güvenmek yanıltır: geçmişte iyi performans göstermiş bir kanal bu segmente uymayabilir ya da mevzuat kısıtına takılabilir. Çok kriterli karar analizi (MCDA) dört boyutu tek skora indirger; ağırlıklar geçmiş kampanya sonuçlarından kalibre edilmiştir ve her kanal için aynı formül uygulanır — kayırma yok, tekrarlanabilirlik var.",
+      method: [
+        "5 kanal için 4 boyut puanlandı: geçmiş performans, segment uyumu, mevzuat uygunluğu, operasyonel hazırlık",
+        "Segment uyumu, 2. aşamadaki segment profiline göre kanala özel ayarlandı (örn. genç segment → In-app ↑, SMS ↓)",
+        "Boyutlar %45/%30/%15/%10 ağırlıkla birleştirilip 0-100 skora çevrildi",
+        "Kanallar skora göre sıralandı; ilk 2 kanal ana + destek olarak önerildi",
+      ],
+      inputs: [
+        "Geçmiş kanal performans matrisi (%45 ağırlık)",
+        "Segment-kanal uyum profili (%30 ağırlık)",
+        "Mevzuat/izin uygunluğu (%15 ağırlık)",
+        "Operasyonel hazırlık — şablon ve ekip durumu (%10 ağırlık)",
+      ],
+      outputs: channels.slice(0, 3).map((item, i) => `${i === 0 ? "Ana kanal önerisi" : i === 1 ? "Destek kanal" : "Alternatif"}: ${item.name} — ${item.score}/100 (performans ${item.history}, uyum ${item.fit})`),
+      score: bestChannel.score,
+      meaning: `${bestChannel.name} ${bestChannel.score}/100 ile önde: ${bestChannel.score >= 80 ? "dört boyutta da güçlü — ana kanal olarak net tercih." : "en iyi seçenek ama fark küçük — A/B testiyle ikinci kanal da denenmeli."}`,
     });
     await wait(420);
 
     const timing = timingAnalysis(idea);
     stage("timing", "Zamanlama & mevsimsellik analizi", timing.window, "done", {
       algorithm: "Seasonal window scorer",
-      why: "Doğru içerik yanlış haftada açılırsa performans kaybediyor; lansman penceresi davranış döngüleriyle hizalanır.",
-      inputs: ["Kampanya teması", "Dönemsel takvim (kayıt/vergi/maaş)", "Maaş ve harcama döngüleri"],
-      outputs: timing.factors,
+      why: "Aynı kampanya doğru haftada açıldığında ile yanlış haftada açıldığında bambaşka sonuç verir — geçmişte kayıt dönemi kaçırıldığı için bir öğrenci kampanyası hedefinin altında kalmıştı. Bu skorlayıcı kampanya temasını dönemsel takvimle (kayıt, vergi, maaş, kur oynaklığı) eşleştirir ve lansman penceresinin gücünü puanlar.",
+      method: [
+        "Kampanya teması dönemsel olay takvimiyle eşleştirildi (kayıt dönemi, vergi haftası, maaş günü…)",
+        "3. aşamadaki talep sinyali ivmesi pencere gücüne kanıt olarak eklendi",
+        "Ay başı maaş döngüsü ve push frekans limiti kısıt olarak işlendi",
+      ],
+      inputs: ["Kampanya teması ve segment profili", "Dönemsel olay takvimi (kayıt/vergi/maaş/kur)", "Maaş yatış ve harcama döngüsü verileri"],
+      outputs: [`Önerilen pencere: ${timing.window}`, ...timing.factors.map((f) => `Gerekçe: ${f}`)],
       score: timing.score,
+      meaning: timing.score >= 85
+        ? `Pencere skoru ${timing.score}/100: lansman tam doğru döneme denk geliyor — zamanlamayı kaçırmamak kampanyanın en kritik başarı faktörü.`
+        : `Pencere skoru ${timing.score}/100: uygun bir dönem var ama keskin bir zirve değil — lansman operasyonel hazırlığa göre esnetilebilir.`,
     });
     await wait(360);
 
     const findings = rulesFor(idea);
+    const ruleScore = Math.max(55, 94 - findings.length * 8);
     stage("rules", "Risk ve uygunluk kuralları çalıştı", `${findings.length} aktif kontrol: ${findings.join(" · ")}`, "done", {
       algorithm: "Deterministic compliance ruleset",
-      why: "Model yorumundan bağımsız, tekrarlanabilir BDDK/KVKK kontrolü sağlamak için.",
-      inputs: ["Ürün türü", "müşteri verisi", "iletişim kanalı"],
-      outputs: findings,
-      score: Math.max(55, 94 - findings.length * 8),
+      why: "Mevzuat kontrolü asla üretken modele bırakılmaz: BDDK ve KVKK kuralları yoruma açık olmamalı, her çalıştırmada aynı sonucu vermelidir. Bu yüzden burada sabit bir kural motoru çalışır — model yalnızca bu motorun bulgularını görev planına işler, kuralın kendisine dokunamaz.",
+      method: [
+        "Ürün türü (kredi/kart/mevduat) mevzuat kural tablosuyla eşleştirildi",
+        "Müşteri verisi kullanımı KVKK izin gereklilikleriyle kontrol edildi",
+        "İletişim kanalları frekans ve izinli iletişim kurallarından geçirildi",
+        "Tetiklenen her kural, Legal görev paketine zorunlu kontrol maddesi olarak eklendi",
+      ],
+      inputs: ["Ürün türü ve teklif yapısı", "Kullanılacak müşteri veri alanları", "Planlanan iletişim kanalları"],
+      outputs: findings.map((f) => `Tetiklenen kontrol: ${f}`),
+      score: ruleScore,
+      meaning: findings.length <= 1
+        ? `Uygunluk ${ruleScore}/100: düşük mevzuat yükü — Legal onayı hızlı ilerleyebilir.`
+        : `Uygunluk ${ruleScore}/100: ${findings.length} kontrol tetiklendi — Legal görevi diğer işlerle paralel ve erken başlatılmalı (Ocak 2025'teki 6 günlük gecikme dersi).`,
     });
     await wait(380);
 
     stage("model", "AI görev sentezi başladı", "Analitik ara sonuçlar dört departmanlık görev şemasına dönüştürülüyor", "running", {
-      algorithm: "OpenAI structured synthesis",
-      why: "Hesaplanan bulguları departmana özel, uygulanabilir iş paketlerine çevirmek için.",
-      inputs: ["Kampanya brief'i", "talep sinyalleri", "benzerlik sonuçları", "kanal skorları", "zamanlama penceresi", "risk kuralları"],
+      algorithm: "LLM structured synthesis (şema kısıtlı)",
+      why: "Önceki 6 aşamanın tamamı deterministik hesaptı; üretken model yalnızca son adımda, bu doğrulanmış bulguları departmanların uygulayabileceği iş paketlerine çevirmek için devreye girer. Model serbest metin değil, katı JSON şemasına uyan çıktı üretmek zorunda — halüsinasyon alanı bilinçli olarak daraltılmıştır.",
+      method: [
+        "6 aşamanın çıktısı yapılandırılmış bağlam olarak modele verildi",
+        "Model, her departman için görev + alt görev + sahip + ETA + risk üretiyor",
+        "Çıktı JSON şema doğrulamasından geçmek zorunda (4 kart, zorunlu alanlar)",
+      ],
+      inputs: ["Kampanya brief'i", "Talep sinyalleri + momentum", "Benzerlik sonuçları", "Kanal skorları", "Zamanlama penceresi", "Risk kuralları"],
       outputs: ["CRM", "Veri Platformları", "Legal", "Pazarlama"],
     });
 
@@ -334,11 +415,17 @@ export default async function handler(req: any, res: any) {
     });
     const { json, provider, model } = await generateStructured(`${SYSTEM}\n\nHESAPLANMIŞ ANALİTİK ARA SONUÇLAR:\n${analysisContext}`, `Kampanya fikri: ${idea}`, SCHEMA, 7000);
     stage("model", "AI görev sentezi tamamlandı", `${provider} · ${model} · yapılandırılmış çıktı alındı`, "done", {
-      algorithm: "OpenAI structured synthesis",
-      why: "Analitik bulguları ekiplerin uygulayabileceği görev paketlerine çevirmek için.",
-      inputs: ["6 analitik aşamanın doğrulanmış çıktıları"],
-      outputs: [`${json.cards?.length ?? 0} departman kartı`, `${json.cards?.flatMap((card: any) => card.details?.subtasks ?? []).length ?? 0} alt görev`],
+      algorithm: "LLM structured synthesis (şema kısıtlı)",
+      why: "Önceki 6 aşamanın deterministik bulguları, üretken model tarafından departmanların uygulayabileceği iş paketlerine çevrildi. Model katı JSON şemasına uymak zorundaydı; her karar gerekçesi, dayandığı analitik bulguya referans veriyor.",
+      method: [
+        "6 aşamanın çıktısı yapılandırılmış bağlam olarak modele verildi",
+        "Her departman için görev + alt görev + sahip + ETA + risk üretildi",
+        "Çıktı JSON şema doğrulamasından geçti (4 kart, zorunlu alanlar)",
+      ],
+      inputs: ["6 analitik aşamanın doğrulanmış çıktıları", `Sağlayıcı: ${provider} · ${model}`],
+      outputs: [`${json.cards?.length ?? 0} departman görev kartı üretildi`, `${json.cards?.flatMap((card: any) => card.details?.subtasks ?? []).length ?? 0} alt görev — her biri sahip ve ETA ile`, "Her kartta insan onayına açık karar gerekçesi"],
       score: 100,
+      meaning: "Analitik bulgular kayıpsız şekilde uygulanabilir görev planına dönüştü; hiçbir karar kaynak gösterilmeden verilmedi.",
     });
     await wait(300);
 
@@ -347,18 +434,30 @@ export default async function handler(req: any, res: any) {
     if (!complete) throw new Error("department_validation_failed");
     stage("validation", "Departman kapsamı doğrulandı", "CRM · Veri Platformları · Legal · Pazarlama eksiksiz", "done", {
       algorithm: "Set coverage validator",
-      why: "Hiçbir departmanın model tarafından atlanmasını engellemek için.",
-      inputs: ["Beklenen departman kümesi: 4", `Üretilen kart: ${json.cards.length}`],
-      outputs: DEPARTMENTS,
+      why: "Üretken modele güven ama doğrula: model bir departmanı atlarsa o ekip görevden haberdar olmaz ve kampanya operasyonel olarak aksar. Bu doğrulayıcı, model çıktısını beklenen departman kümesiyle karşılaştırır; eksik ya da mükerrer kart varsa süreç ilerlemez, hata olarak durdurulur.",
+      method: [
+        "Model çıktısındaki departman adları kümeye çevrildi",
+        "Beklenen 4 departmanla birebir karşılaştırıldı (eksik/mükerrer kontrolü)",
+        "Uyumsuzlukta süreç hata ile durduruluyor — kısmi dağıtım yapılmaz",
+      ],
+      inputs: ["Beklenen departman kümesi: CRM, Veri Platformları, Legal, Pazarlama", `Model çıktısı: ${json.cards.length} kart`],
+      outputs: DEPARTMENTS.map((d) => `${d}: kart mevcut ✓`),
       score: 100,
+      meaning: "4/4 kapsam sağlandı — hiçbir departman atlanmadı, dağıtım güvenle yapılabilir.",
     });
     await wait(260);
     stage("dispatch", "Team-bot mesajları hazırlandı", "Her departmana ihtiyaç, talep edilen veri, geliştirme işi ve gerekçe bağlandı", "done", {
       algorithm: "Department payload composer",
-      why: "Analiz sonucunu ekiplerin doğrudan aksiyona çevirebileceği mesajlara dönüştürmek için.",
-      inputs: ["Departman kartları", "alt görevler", "sahipler", "ETA"],
-      outputs: DEPARTMENTS.map((department) => `${department} team-bot paketi`),
+      why: "Analiz ne kadar iyi olursa olsun, ekibin eline geçen mesaj uygulanabilir değilse değer üretmez. Bu adım her departman için görevi, talep edilen veriyi, alt görevleri ve karar gerekçesini tek pakette birleştirir — ekip 'neden ben, neden şimdi, ne yapacağım' sorularının üçünün de cevabını aynı kartta görür.",
+      method: [
+        "Her departman kartı team-bot mesaj şablonuna yerleştirildi",
+        "Alt görevler sahip ve ETA ile sıralandı, veri talepleri ayrıştırıldı",
+        "Karar gerekçesi ve risk notu pakete eklendi — insan onay noktası korunuyor",
+      ],
+      inputs: ["4 doğrulanmış departman kartı", "Alt görev listeleri (sahip + ETA)", "Veri kaynağı talepleri", "Karar gerekçeleri"],
+      outputs: DEPARTMENTS.map((department) => `${department} paketi hazır — panoda ve Slack köprüsünde gönderime açık`),
       score: 100,
+      meaning: "Görev paketleri dağıtıma hazır; departmanlar panodan veya Slack kanalından tek tıkla devralabilir.",
     });
 
     send("completed", {

@@ -6,6 +6,7 @@ import {
   BrainCircuit,
   Check,
   Cpu,
+  Lightbulb,
   LoaderCircle,
   RotateCcw,
   ShieldCheck,
@@ -147,25 +148,51 @@ function StageCard({ event, expanded, onSelect }: { event: TraceEvent; expanded:
           </div>
         )}
       </div>
+
       {event.algorithm && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1.5 rounded-md border border-fgreen/20 bg-fgreen/[.05] px-2 py-1 font-mono text-[9px] text-fgreen-light"><Cpu size={10} /> {event.algorithm}</span>
-          {event.why && <span className="min-w-0 flex-1 text-[9px] leading-4 text-slate-500"><span className="text-slate-400">Neden bu yöntem?</span> {event.why}</span>}
+        <div className="mt-3 rounded-xl border border-white/[.06] bg-[#061426]/60 p-3">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 rounded-md border border-fgreen/20 bg-fgreen/[.05] px-2 py-1 font-mono text-[9px] text-fgreen-light"><Cpu size={10} /> {event.algorithm}</span>
+            <span className="font-mono text-[7px] uppercase tracking-[.18em] text-slate-600">neden bu yöntem?</span>
+          </div>
+          {event.why && <p className="mt-2 border-l-2 border-fteal/25 pl-3 text-[10px] leading-[17px] text-slate-400">{event.why}</p>}
         </div>
       )}
-      {(event.inputs?.length || event.outputs?.length) ? (
-        <div className="mt-3 flex items-stretch gap-2">
-          <div className="min-w-0 flex-1 rounded-lg border border-white/[.06] bg-[#061426]/80 p-2.5">
-            <div className="mb-1.5 font-mono text-[7px] uppercase tracking-[.18em] text-slate-600">girdi akışı</div>
-            <div className="flex flex-wrap gap-1">{(event.inputs ?? []).map((item, index) => <motion.span key={item} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .15 + index * .09 }} className="rounded border border-fteal/15 bg-fteal/[.04] px-1.5 py-0.5 text-[8px] text-slate-400">{item}</motion.span>)}</div>
-          </div>
-          <div className="grid place-items-center text-fteal"><motion.div animate={{ x: [0, 4, 0] }} transition={{ duration: 1.1, repeat: Infinity }}><ArrowRight size={13} /></motion.div></div>
-          <div className="min-w-0 flex-1 rounded-lg border border-white/[.06] bg-[#061426]/80 p-2.5">
-            <div className="mb-1.5 font-mono text-[7px] uppercase tracking-[.18em] text-slate-600">çıktı</div>
-            <div className="flex flex-wrap gap-1">{(event.outputs ?? []).map((item, index) => <motion.span key={item} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .3 + index * .09 }} className="rounded border border-fgreen/15 bg-fgreen/[.04] px-1.5 py-0.5 text-[8px] text-slate-400">{item}</motion.span>)}</div>
+
+      {event.method?.length ? (
+        <div className="mt-2.5 rounded-xl border border-white/[.06] bg-[#061426]/60 p-3">
+          <div className="mb-2 font-mono text-[7px] uppercase tracking-[.18em] text-slate-600">nasıl analiz etti?</div>
+          <div className="space-y-1.5">
+            {event.method.map((step, index) => (
+              <motion.div key={step} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .2 + index * .18 }} className="flex gap-2.5">
+                <span className="mt-px grid h-4 w-4 shrink-0 place-items-center rounded border border-fteal/25 bg-fteal/[.06] font-mono text-[8px] text-fteal-light">{index + 1}</span>
+                <span className="text-[10px] leading-4 text-slate-300">{step}</span>
+              </motion.div>
+            ))}
           </div>
         </div>
       ) : null}
+
+      {(event.inputs?.length || event.outputs?.length) ? (
+        <div className="mt-2.5 grid gap-2 md:grid-cols-[1fr_auto_1fr]">
+          <div className="min-w-0 rounded-xl border border-fteal/12 bg-[#061426]/70 p-3">
+            <div className="mb-2 flex items-center gap-1.5 font-mono text-[7px] uppercase tracking-[.18em] text-fteal">▸ kullanılan veri</div>
+            <div className="space-y-1.5">{(event.inputs ?? []).map((item, index) => <motion.div key={item} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .25 + index * .12 }} className="flex gap-2 text-[9px] leading-4 text-slate-400"><span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-fteal/60" />{item}</motion.div>)}</div>
+          </div>
+          <div className="hidden place-items-center text-fteal md:grid"><motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 1.1, repeat: Infinity }}><ArrowRight size={15} /></motion.div></div>
+          <div className="min-w-0 rounded-xl border border-fgreen/12 bg-[#061426]/70 p-3">
+            <div className="mb-2 flex items-center gap-1.5 font-mono text-[7px] uppercase tracking-[.18em] text-fgreen-light">✓ üretilen bulgu</div>
+            <div className="space-y-1.5">{(event.outputs ?? []).map((item, index) => <motion.div key={item} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .4 + index * .12 }} className="flex gap-2 text-[9px] leading-4 text-slate-300"><span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-fgreen/70" />{item}</motion.div>)}</div>
+          </div>
+        </div>
+      ) : null}
+
+      {event.meaning && (
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .55 }} className="mt-2.5 flex items-start gap-2.5 rounded-xl border border-amber/20 bg-amber/[.05] p-3">
+          <Lightbulb size={13} className="mt-0.5 shrink-0 text-amber" />
+          <div><span className="font-mono text-[7px] uppercase tracking-[.18em] text-amber">bu sonuç ne anlama geliyor?</span><p className="mt-1 text-[10px] leading-4 text-slate-300">{event.meaning}</p></div>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
@@ -184,10 +211,10 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
   const streamRef = useRef<HTMLDivElement>(null);
 
   // Sunucu hızından bağımsız sunum temposu: aşamalar geldiği anda değil,
-  // okunabilir aralıklarla (2.6 sn) ekrana düşer. Canlıda kuyruk birikir,
+  // okunabilir aralıklarla (3.2 sn) ekrana düşer. Canlıda kuyruk birikir,
   // tekrar oynatmada kayıtlı trace aynı tempoyla akar.
   useEffect(() => {
-    const timer = setInterval(() => setRevealCount((current) => (current < events.length ? current + 1 : current)), 2600);
+    const timer = setInterval(() => setRevealCount((current) => (current < events.length ? current + 1 : current)), 3200);
     return () => clearInterval(timer);
   }, [events.length]);
   useEffect(() => {
