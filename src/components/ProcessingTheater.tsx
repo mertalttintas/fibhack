@@ -7,6 +7,7 @@ import {
   Check,
   Cpu,
   LoaderCircle,
+  RotateCcw,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -113,16 +114,16 @@ function Rail({ events, running }: { events: TraceEvent[]; running: boolean }) {
   );
 }
 
-function StageCard({ event, expanded }: { event: TraceEvent; expanded: boolean }) {
+function StageCard({ event, expanded, onSelect }: { event: TraceEvent; expanded: boolean; onSelect: () => void }) {
   if (!expanded) {
     return (
-      <motion.div layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 rounded-xl border border-white/[.05] bg-white/[.015] px-3 py-2">
+      <motion.button layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} onClick={onSelect} className="flex w-full items-center gap-3 rounded-xl border border-white/[.05] bg-white/[.015] px-3 py-2 text-left transition hover:border-fteal/25 hover:bg-fteal/[.03]">
         {event.status === "error" ? <AlertTriangle size={11} className="shrink-0 text-coral" /> : <Check size={11} className="shrink-0 text-fgreen-light" />}
         <span className="text-[10px] font-medium text-slate-300">{event.label}</span>
         {event.algorithm && <span className="hidden truncate font-mono text-[8px] text-slate-600 md:block">{event.algorithm}</span>}
         <span className="ml-auto shrink-0 font-mono text-[8px] text-slate-700">{clock(event.timestamp)}</span>
         {typeof event.score === "number" && <span className="shrink-0 rounded border border-fteal/20 px-1.5 py-0.5 font-mono text-[8px] text-fteal-light">{event.score}/100</span>}
-      </motion.div>
+      </motion.button>
     );
   }
   return (
@@ -175,24 +176,36 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
   onClose: () => void;
 }) {
   const [revealCount, setRevealCount] = useState(0);
+  const [manualId, setManualId] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef(Date.now());
   const streamRef = useRef<HTMLDivElement>(null);
 
+  // Sunucu hızından bağımsız sunum temposu: aşamalar geldiği anda değil,
+  // okunabilir aralıklarla (2.6 sn) ekrana düşer. Canlıda kuyruk birikir,
+  // tekrar oynatmada kayıtlı trace aynı tempoyla akar.
   useEffect(() => {
-    if (mode !== "replay") return;
-    setRevealCount(0);
-    const timer = setInterval(() => setRevealCount((current) => {
-      if (current >= events.length) { clearInterval(timer); return current; }
-      return current + 1;
-    }), 950);
+    const timer = setInterval(() => setRevealCount((current) => (current < events.length ? current + 1 : current)), 2600);
     return () => clearInterval(timer);
-  }, [mode, events.length]);
+  }, [events.length]);
+  useEffect(() => {
+    if (revealCount === 0 && events.length > 0) setRevealCount(1);
+  }, [events.length, revealCount]);
+  useEffect(() => {
+    if (status === "error") setRevealCount(events.length);
+  }, [status, events.length]);
 
-  const visible = mode === "replay" ? events.slice(0, revealCount) : events;
-  const running = mode === "replay" ? revealCount < events.length : status === "processing";
-  const finished = mode === "replay" ? revealCount >= events.length && events.length > 0 : status === "completed";
-  const failed = mode === "live" && status === "error";
+  const visible = events.slice(0, revealCount);
+  const running = status === "processing" || revealCount < events.length;
+  const finished = status === "completed" && events.length > 0 && revealCount >= events.length;
+  const failed = status === "error";
+
+  const restart = () => {
+    setRevealCount(0);
+    setManualId(null);
+    startRef.current = Date.now();
+    setElapsed(0);
+  };
 
   useEffect(() => {
     if (!running) return;
@@ -201,12 +214,14 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
   }, [running]);
 
   useEffect(() => {
+    if (manualId) return;
     streamRef.current?.scrollTo({ top: streamRef.current.scrollHeight, behavior: "smooth" });
-  }, [visible.length]);
+  }, [visible.length, manualId]);
 
   const doneStages = new Set(visible.filter((event) => event.status === "done").map((event) => event.id));
   const percent = Math.round((STAGES.filter(([id]) => doneStages.has(id)).length / STAGES.length) * 100);
   const latest = visible[visible.length - 1];
+  const expandedId = manualId && visible.some((event) => event.id === manualId) ? manualId : latest?.id;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] overflow-y-auto bg-[#030b16]/95 backdrop-blur-md">
@@ -223,6 +238,7 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
             <h2 className="mt-2 max-w-xl text-lg font-semibold leading-6 text-white">{title}</h2>
           </div>
           <div className="flex items-center gap-3">
+            {!running && events.length > 0 && <button onClick={restart} className="flex items-center gap-1.5 rounded-lg border border-fteal/25 bg-fteal/[.06] px-3 py-2 text-[10px] font-semibold text-fteal-light transition hover:bg-fteal/10"><RotateCcw size={12} /> Baştan izle</button>}
             <div className="rounded-lg border border-white/[.08] bg-white/[.02] px-3 py-1.5 text-right">
               <div className="font-mono text-sm text-fteal-light">{elapsed.toFixed(1)}s</div>
               <div className="font-mono text-[7px] uppercase tracking-[.2em] text-slate-600">geçen süre</div>
@@ -243,7 +259,7 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
             <div ref={streamRef} className="relative max-h-[calc(100vh-290px)] min-h-[320px] flex-1 space-y-2 overflow-y-auto rounded-2xl border border-white/[.06] bg-[#061426]/60 p-4">
               <Corners />
               <AnimatePresence initial={false}>
-                {visible.map((event) => <StageCard key={event.id} event={event} expanded={event.id === latest?.id} />)}
+                {visible.map((event) => <StageCard key={event.id} event={event} expanded={event.id === expandedId} onSelect={() => setManualId(event.id === manualId ? null : event.id)} />)}
               </AnimatePresence>
               {visible.length === 0 && <div className="grid h-full min-h-[280px] place-items-center text-center"><div><LoaderCircle size={22} className="mx-auto mb-3 animate-spin text-fteal" /><div className="font-mono text-[9px] uppercase tracking-[.25em] text-slate-500">karar motoru başlatılıyor</div></div></div>}
               {running && visible.length > 0 && (
@@ -261,7 +277,10 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
                       <div className="mt-0.5 text-[9px] text-slate-500">Görev paketleri 4 departmana dağıtıldı · tüm kararlar gerekçeleriyle kayıt altında</div>
                     </div>
                   </div>
-                  <button onClick={onClose} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-fteal to-fgreen px-4 py-2.5 text-xs font-bold text-[#061426]">Görev panosuna dön <ArrowRight size={13} /></button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={restart} className="flex items-center gap-1.5 rounded-xl border border-fteal/25 bg-fteal/[.06] px-3 py-2.5 text-xs font-semibold text-fteal-light transition hover:bg-fteal/10"><RotateCcw size={12} /> Baştan izle</button>
+                    <button onClick={onClose} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-fteal to-fgreen px-4 py-2.5 text-xs font-bold text-[#061426]">Görev panosuna dön <ArrowRight size={13} /></button>
+                  </div>
                 </motion.div>
               )}
               {failed && (
