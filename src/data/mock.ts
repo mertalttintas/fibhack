@@ -43,6 +43,16 @@ export interface DeptDetail {
   risk: string;
 }
 
+export interface DeptDraft {
+  headline: string;
+  items: { title: string; content: string }[];
+  note: string;
+  source: "ai" | "template";
+  provider?: string;
+  model?: string;
+  generatedAt: string;
+}
+
 export interface DeptTask {
   id: string;
   department: Department;
@@ -54,6 +64,7 @@ export interface DeptTask {
   rationale: string; // AI karar gerekçesi
   warning?: string;
   details?: DeptDetail;
+  draft?: DeptDraft; // "AI İşliyor" aşamasının çıktısı: ön çalışma paketi
   ai?: {
     provider: string;
     model: string;
@@ -458,7 +469,7 @@ export const initialTasks: DeptTask[] = [
     department: "CRM",
     title: "Hedef segment listesi çıkarılacak",
     summary: "18-30 yaş, son 6 ayda kira ödemesi yapan aktif mobil kullanıcılar.",
-    status: "processing",
+    status: "waiting",
     assignedAt: "Bugün 09:41",
     priority: "Yüksek",
     rationale:
@@ -484,7 +495,7 @@ export const initialTasks: DeptTask[] = [
     department: "Legal",
     title: "BDDK duyuru gerekliliği kontrolü",
     summary: "Puan oranı iletişiminin mevzuat uyumu ve açık rıza metni.",
-    status: "processing",
+    status: "waiting",
     assignedAt: "Bugün 09:41",
     priority: "Yüksek",
     warning: "Mevzuat riski — erken başlatıldı",
@@ -562,6 +573,44 @@ export const initialTasks: DeptTask[] = [
       "Puan programları müşteri harcama verisi işlediği için KVKK kapsamı genişliyor; geçmiş denetim bulguları rıza metninin kampanya lansmanından önce güncellenmesini zorunlu kılıyor.",
   },
 ];
+
+// ---- AI ön çalışma taslağı: yerel şablon fallback'i -------------------------
+// /api/prepare erişilemezse demo kesintiye uğramasın diye departmana özel
+// önceden yazılmış taslaklar kullanılır.
+
+export function localDraft(department: Department): DeptDraft {
+  const base = {
+    source: "template" as const,
+    generatedAt: new Date().toISOString(),
+    note: "Taslak, departman onayı olmadan yayına çıkmaz; tüm içerik insan denetiminden geçer.",
+  };
+  switch (department) {
+    case "Pazarlama":
+      return { ...base, headline: "Push A/B varyantları ve in-app story taslağı", items: [
+        { title: "Varyant A · fayda odaklı push", content: "Kiranı öde, puanları topla 🎓 Genç Kart'la her kira ödemesinde puan seni bekliyor. 3 dakikada başvur." },
+        { title: "Varyant B · aciliyet odaklı push", content: "Kayıt haftası bitmeden Genç Kart'ını al — ilk kira ödemene ekstra puan. Son günler!" },
+        { title: "In-app story başlığı", content: "Kira ödemek hiç bu kadar kazandırmamıştı → 3 adımda başvuru" },
+      ]};
+    case "CRM":
+      return { ...base, headline: "Hedef segment filtre seti taslağı", items: [
+        { title: "Filtre kriterleri", content: "Yaş 18-30 · son 6 ayda ≥3 kira ödemesi · aktif mobil kullanıcı · izinli iletişim = evet" },
+        { title: "Önceliklendirme kuralı", content: "Churn skoru ≥ 0.6 olan müşteriler ilk gönderim dalgasına alınır (elde tutma maliyeti avantajı)" },
+        { title: "Hariç tutma listesi", content: "Son 30 günde 2+ kampanya bildirimi almış müşteriler — push yorgunluk limiti" },
+      ]};
+    case "Legal":
+      return { ...base, headline: "Uyum kontrol listesi taslağı", items: [
+        { title: "BDDK duyuru gerekliliği", content: "Puan oranı iletişimi 'faiz benzeri getiri' kapsamına giriyor mu — ön inceleme formu hazırlandı" },
+        { title: "KVKK açık rıza", content: "Puan programı harcama verisi işlediği için rıza metnine ek madde taslağı hazır" },
+        { title: "Reklam kurulu kriterleri", content: "'En avantajlı' türü karşılaştırmalı ifadeler metinlerden çıkarılmalı; taahhüt metni sadeleştirilmeli" },
+      ]};
+    case "Veri Platformları":
+      return { ...base, headline: "Funnel event şeması taslağı", items: [
+        { title: "Event zinciri", content: "push_sent → push_opened → campaign_view → application_started → application_approved" },
+        { title: "Dashboard panelleri", content: "Saatlik açılma oranı · kanal bazlı dönüşüm · A/B varyant karşılaştırması" },
+        { title: "Otomatik rapor", content: "Her gün 09:00'da kampanya ekibine özet rapor (şablon: funnel-daily-v2)" },
+      ]};
+  }
+}
 
 // ---- Demo: kuyruğa önceden işlenmiş kampanyalar -----------------------------
 

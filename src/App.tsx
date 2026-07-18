@@ -14,6 +14,10 @@ export default function App() {
   const [tasks, setTasks] = useState<DeptTask[]>(initialTasks);
   const [campaigns, setCampaigns] = useState<CampaignJob[]>(seedCampaigns);
 
+  const updateTask = useCallback((id: string, patch: Partial<DeptTask>) => {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }, []);
+
   const advanceTask = useCallback((id: string) => {
     setTasks((prev) =>
       prev.map((t) => {
@@ -115,6 +119,7 @@ export default function App() {
                 tasks={tasks}
                 campaigns={campaigns}
                 onAdvance={advanceTask}
+                onUpdateTask={updateTask}
                 onUpdateCampaign={updateCampaign}
                 onCompleteCampaign={completeCampaign}
                 onNewCampaign={() => setPage("campaign")}
