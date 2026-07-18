@@ -10,6 +10,63 @@ const MEMORY = [
   { name: "Emekli Bankacılığı", tags: ["emekli", "maaş", "55", "promosyon"], channel: "SMS", openRate: 24, conversion: 4.6 },
 ];
 
+// Mobil bankacılık davranış verisi: son 30 gün arama terimleri ve ekran kullanımı.
+// Talep sinyali aşaması kampanya fikrini bu veriyle eşleştirip momentum skoru üretir.
+const SEARCHES = [
+  { term: "kira öderken puan", count: 4210, change: 31, tags: ["kira", "puan", "genç", "öğrenci", "kart"] },
+  { term: "öğrenci hesabı", count: 3860, change: 31, tags: ["öğrenci", "üniversite", "genç", "hesap"] },
+  { term: "konut kredisi faiz", count: 3120, change: 34, tags: ["konut", "kredi", "faiz", "ev", "evlilik"] },
+  { term: "döviz alarmı", count: 2540, change: 21, tags: ["döviz", "alarm", "kur", "vadeli"] },
+  { term: "borç yapılandırma", count: 1980, change: 18, tags: ["borç", "yapılandırma", "kart", "kredi"] },
+  { term: "vadeli hesap", count: 1720, change: 12, tags: ["vadeli", "mevduat", "faiz", "birikim", "döviz"] },
+  { term: "pos komisyon", count: 1490, change: 16, tags: ["pos", "kobi", "işletme", "ticari", "e-ticaret"] },
+  { term: "emekli promosyon", count: 1310, change: 9, tags: ["emekli", "promosyon", "maaş", "55"] },
+  { term: "altın hesabı", count: 1240, change: 14, tags: ["altın", "yatırım", "birikim"] },
+  { term: "taşıt kredisi", count: 1150, change: 7, tags: ["taşıt", "araç", "kredi"] },
+  { term: "kredi kartı limit artırma", count: 1080, change: 11, tags: ["kart", "limit", "kredi"] },
+  { term: "evlilik kredisi", count: 940, change: 19, tags: ["evlilik", "çift", "kredi", "konut", "eşya"] },
+];
+
+const TABS = [
+  { name: "Para Transferi", usage: 100, change: 2, tags: ["transfer", "ödeme", "kira"] },
+  { name: "Kredi Hesaplama", usage: 78, change: 12, tags: ["kredi", "konut", "taşıt", "hesaplama", "evlilik"] },
+  { name: "Döviz & Altın", usage: 64, change: 9, tags: ["döviz", "altın", "kur", "yatırım", "alarm"] },
+  { name: "Kart İşlemleri", usage: 52, change: 6, tags: ["kart", "limit", "borç", "puan"] },
+  { name: "Fatura Ödeme", usage: 47, change: 3, tags: ["fatura", "ödeme", "kira"] },
+  { name: "Yatırım", usage: 38, change: 4, tags: ["yatırım", "fon", "mevduat", "vadeli"] },
+  { name: "Kampanyalar", usage: 33, change: 15, tags: ["kampanya", "puan", "fırsat", "promosyon"] },
+  { name: "Başvurular", usage: 29, change: 8, tags: ["başvuru", "kredi", "kart", "hesap", "öğrenci"] },
+];
+
+function signalAnalysis(idea: string) {
+  const lower = idea.toLocaleLowerCase("tr-TR");
+  const matchedSearches = SEARCHES.filter((s) => s.tags.some((tag) => lower.includes(tag)))
+    .sort((a, b) => b.count * b.change - a.count * a.change).slice(0, 4);
+  const matchedTabs = TABS.filter((t) => t.tags.some((tag) => lower.includes(tag)))
+    .sort((a, b) => b.change - a.change).slice(0, 3);
+  const volume = matchedSearches.reduce((sum, s) => sum + s.count, 0);
+  const avgChange = matchedSearches.length
+    ? matchedSearches.reduce((sum, s) => sum + s.change, 0) / matchedSearches.length : 0;
+  const tabBoost = matchedTabs.length ? matchedTabs.reduce((sum, t) => sum + t.change, 0) / matchedTabs.length : 0;
+  const momentum = Math.min(98, Math.round(38 + avgChange * 1.4 + tabBoost * 0.8 + Math.min(20, volume / 500)));
+  return { matchedSearches, matchedTabs, volume, momentum };
+}
+
+function timingAnalysis(idea: string) {
+  const lower = idea.toLocaleLowerCase("tr-TR");
+  const factors: string[] = [];
+  let window = "Ay başı maaş yatış haftası — genel kampanya açılmasını artıran dönem";
+  let score = 68;
+  if (/öğrenci|üniversite|genç|kayıt/.test(lower)) { window = "Üniversite kayıt dönemi öncesi hafta — öğrenci aramaları zirvede"; factors.push("'öğrenci hesabı' aramaları +%31"); score = 90; }
+  else if (/konut|ev |evlilik/.test(lower)) { window = "Faiz indirim beklentisi dönemi — hesaplama ekranı trafiği yüksek"; factors.push("Kredi Hesaplama sekmesi +%12"); score = 84; }
+  else if (/döviz|kur|alarm/.test(lower)) { window = "Kur hareketliliği haftası — alarm kurulumları artışta"; factors.push("Döviz alarmı kurulumları +%21"); score = 82; }
+  else if (/kobi|pos|işletme/.test(lower)) { window = "Vergi/KDV dönemi sonrası — işletme nakit akışı gündemde"; factors.push("'pos komisyon' aramaları +%16"); score = 76; }
+  else if (/emekli|maaş/.test(lower)) { window = "3 aylık emekli maaş promosyon takvimi penceresi"; factors.push("SMS kanalı 55+ segmentte güvenilir"); score = 74; }
+  factors.push("Ay başı maaş döngüsü ile hizalama önerildi");
+  factors.push("Haftalık push frekans limiti: 2 bildirim");
+  return { window, factors, score };
+}
+
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -98,8 +155,9 @@ KURUMSAL HAFIZA:
 - Eylül 2025 Kira Öde Puan Kazan: In-app story 18-30 segmentinde dönüşümü %28 artırdı.
 - Haziran 2025 Emekli Bankacılığı: 55+ segmentte SMS daha güvenilir, push opt-in düşük.
 
-CANLI TALEP SİNYALLERİ:
-- Konut kredisi hesaplama +%34, döviz alarmı +%21, öğrenci hesabı araması +%31, borç yapılandırma +%18.
+CANLI TALEP SİNYALLERİ (mobil bankacılık, son 30 gün):
+- Aramalar: kira öderken puan 4.210 (+%31) · öğrenci hesabı 3.860 (+%31) · konut kredisi faiz 3.120 (+%34) · döviz alarmı 2.540 (+%21) · borç yapılandırma 1.980 (+%18) · pos komisyon 1.490 (+%16) · evlilik kredisi 940 (+%19).
+- Ekran kullanımı: Kredi Hesaplama +%12, Kampanyalar sekmesi +%15, Döviz & Altın +%9, Başvurular +%8.
 
 KARAR YÖNTEMİ:
 1. Benzer kampanyaları anlamsal olarak eşleştir.
@@ -199,6 +257,22 @@ export default async function handler(req: any, res: any) {
     });
     await wait(380);
 
+    const signals = signalAnalysis(idea);
+    const topSignal = signals.matchedSearches[0];
+    stage("signals", "Talep sinyalleri tarandı", topSignal
+      ? `${signals.matchedSearches.length} arama + ${signals.matchedTabs.length} ekran eşleşti · en güçlü: "${topSignal.term}" +%${topSignal.change}`
+      : "Doğrudan sinyal eşleşmesi yok · genel talep taban çizgisi kullanılacak", "done", {
+      algorithm: "Momentum sinyal eşleştirici",
+      why: "Kampanyayı varsayımla değil, müşterilerin uygulamada şu an aradığı ve gezdiği gerçek davranış verisiyle temellendirmek için.",
+      inputs: ["12 arama terimi · 24.6K aylık sorgu", "8 ekran kullanım metriği", "Son 30 gün değişim oranları"],
+      outputs: [
+        ...signals.matchedSearches.map((s) => `"${s.term}" ${s.count.toLocaleString("tr-TR")} arama · +%${s.change}`),
+        ...signals.matchedTabs.map((t) => `${t.name} sekmesi +%${t.change}`),
+      ].slice(0, 6),
+      score: signals.momentum,
+    });
+    await wait(380);
+
     const matches = similarityAnalysis(idea);
     stage("memory", "Benzer kampanyalar sıralandı", matches.map((item) => `${item.name} %${item.score}`).join(" · "), "done", {
       algorithm: "Weighted Jaccard Retrieval",
@@ -219,6 +293,16 @@ export default async function handler(req: any, res: any) {
     });
     await wait(420);
 
+    const timing = timingAnalysis(idea);
+    stage("timing", "Zamanlama & mevsimsellik analizi", timing.window, "done", {
+      algorithm: "Seasonal window scorer",
+      why: "Doğru içerik yanlış haftada açılırsa performans kaybediyor; lansman penceresi davranış döngüleriyle hizalanır.",
+      inputs: ["Kampanya teması", "Dönemsel takvim (kayıt/vergi/maaş)", "Maaş ve harcama döngüleri"],
+      outputs: timing.factors,
+      score: timing.score,
+    });
+    await wait(360);
+
     const findings = rulesFor(idea);
     stage("rules", "Risk ve uygunluk kuralları çalıştı", `${findings.length} aktif kontrol: ${findings.join(" · ")}`, "done", {
       algorithm: "Deterministic compliance ruleset",
@@ -232,16 +316,27 @@ export default async function handler(req: any, res: any) {
     stage("model", "AI görev sentezi başladı", "Analitik ara sonuçlar dört departmanlık görev şemasına dönüştürülüyor", "running", {
       algorithm: "OpenAI structured synthesis",
       why: "Hesaplanan bulguları departmana özel, uygulanabilir iş paketlerine çevirmek için.",
-      inputs: ["Kampanya brief'i", "benzerlik sonuçları", "kanal skorları", "risk kuralları"],
+      inputs: ["Kampanya brief'i", "talep sinyalleri", "benzerlik sonuçları", "kanal skorları", "zamanlama penceresi", "risk kuralları"],
       outputs: ["CRM", "Veri Platformları", "Legal", "Pazarlama"],
     });
 
-    const analysisContext = JSON.stringify({ segments, similarCampaigns: matches, channelScores: channels.slice(0, 3), complianceRules: findings });
+    const analysisContext = JSON.stringify({
+      segments,
+      demandSignals: {
+        momentumScore: signals.momentum,
+        matchedSearches: signals.matchedSearches.map((s) => ({ term: s.term, monthlyCount: s.count, changePct: s.change })),
+        matchedTabs: signals.matchedTabs.map((t) => ({ tab: t.name, changePct: t.change })),
+      },
+      similarCampaigns: matches,
+      channelScores: channels.slice(0, 3),
+      timingWindow: { window: timing.window, factors: timing.factors, score: timing.score },
+      complianceRules: findings,
+    });
     const { json, provider, model } = await generateStructured(`${SYSTEM}\n\nHESAPLANMIŞ ANALİTİK ARA SONUÇLAR:\n${analysisContext}`, `Kampanya fikri: ${idea}`, SCHEMA, 7000);
     stage("model", "AI görev sentezi tamamlandı", `${provider} · ${model} · yapılandırılmış çıktı alındı`, "done", {
       algorithm: "OpenAI structured synthesis",
       why: "Analitik bulguları ekiplerin uygulayabileceği görev paketlerine çevirmek için.",
-      inputs: ["4 analitik aşamanın doğrulanmış çıktıları"],
+      inputs: ["6 analitik aşamanın doğrulanmış çıktıları"],
       outputs: [`${json.cards?.length ?? 0} departman kartı`, `${json.cards?.flatMap((card: any) => card.details?.subtasks ?? []).length ?? 0} alt görev`],
       score: 100,
     });

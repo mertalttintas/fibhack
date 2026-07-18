@@ -17,8 +17,10 @@ import { cn } from "../lib/utils";
 const STAGES = [
   ["intake", "Niyet Analizi"],
   ["segment", "Segment Çıkarımı"],
+  ["signals", "Talep Sinyalleri"],
   ["memory", "Hafıza Taraması"],
   ["channels", "Kanal Skorlama"],
+  ["timing", "Zamanlama Analizi"],
   ["rules", "Risk Kuralları"],
   ["model", "AI Sentez"],
   ["validation", "Kapsam Kontrolü"],
@@ -101,7 +103,7 @@ function Rail({ events, running }: { events: TraceEvent[]; running: boolean }) {
         const isRunning = event?.status === "running";
         return (
           <div key={id} className={cn("flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 transition", event ? "border-fteal/12 bg-fteal/[.03]" : isNext ? "border-fteal/25 bg-fteal/[.05]" : "border-transparent opacity-40")}>
-            <span className="w-4 font-mono text-[8px] text-slate-600">0{index + 1}</span>
+            <span className="w-4 font-mono text-[8px] text-slate-600">{String(index + 1).padStart(2, "0")}</span>
             <span className="grid h-4 w-4 place-items-center">
               {isRunning || isNext ? <LoaderCircle size={11} className="animate-spin text-fteal-light" /> : event?.status === "error" ? <AlertTriangle size={10} className="text-coral" /> : event ? <Check size={11} className="text-fgreen-light" /> : <span className="h-1 w-1 rounded-full bg-slate-700" />}
             </span>
