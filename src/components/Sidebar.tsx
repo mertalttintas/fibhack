@@ -67,6 +67,16 @@ export function Sidebar({
         })}
       </nav>
 
+      <div className="px-4 pb-3">
+        <div className="relative overflow-hidden rounded-2xl border border-white/25 shadow-[0_8px_24px_rgba(13,43,69,0.2)]">
+          <img src="/rabbit-full.png" alt="Fiba maskot" className="h-48 w-full object-cover object-top" />
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1c4d12]/85 via-[#1c4d12]/40 to-transparent px-3 pb-2.5 pt-10">
+            <div className="text-[11px] font-bold leading-tight text-white">Team-bot görevde</div>
+            <div className="mt-0.5 text-[9px] text-white/80">Kampanyalar tavşan hızında 🍒</div>
+          </div>
+        </div>
+      </div>
+
       <div className="border-t border-white/15 px-5 py-4">
         <div className="flex items-center gap-2.5 rounded-2xl border border-white/20 bg-white/10 px-3 py-2.5 backdrop-blur-sm">
           <div className="relative shrink-0">
