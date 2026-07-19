@@ -9,7 +9,7 @@ export function DiamondLogo({ size = 36, className }: { size?: number; className
           className="absolute inset-0 rounded-full opacity-60"
           style={{
             background:
-              "conic-gradient(from 0deg, transparent 0%, rgba(47,182,166,0.5) 12%, transparent 28%, transparent 60%, rgba(141,198,63,0.35) 72%, transparent 88%)",
+              "conic-gradient(from 0deg, transparent 0%, rgba(0,105,180,0.5) 12%, transparent 28%, transparent 60%, rgba(141,198,63,0.35) 72%, transparent 88%)",
             filter: "blur(3px)",
           }}
         />
@@ -17,8 +17,8 @@ export function DiamondLogo({ size = 36, className }: { size?: number; className
       <svg viewBox="0 0 48 48" width={size} height={size} className="relative">
         <defs>
           <linearGradient id="dg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#2FB6A6" />
-            <stop offset="55%" stopColor="#4FD8C7" />
+            <stop offset="0%" stopColor="#0069B4" />
+            <stop offset="55%" stopColor="#2E9ED6" />
             <stop offset="100%" stopColor="#8DC63F" />
           </linearGradient>
         </defs>
@@ -30,7 +30,7 @@ export function DiamondLogo({ size = 36, className }: { size?: number; className
           rx="4"
           transform="rotate(45 24 24)"
           fill="url(#dg)"
-          className="drop-shadow-[0_0_8px_rgba(47,182,166,0.6)]"
+          className="drop-shadow-[0_0_8px_rgba(0,105,180,0.6)]"
         />
         <rect
           x="18"
@@ -39,7 +39,7 @@ export function DiamondLogo({ size = 36, className }: { size?: number; className
           height="12"
           rx="2"
           transform="rotate(45 24 24)"
-          fill="#071B36"
+          fill="#ffffff"
           opacity="0.85"
         />
       </svg>

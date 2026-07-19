@@ -37,8 +37,8 @@ function CampaignRow({ campaign, expanded, onToggle }: { campaign: PastCampaign;
           <span title={RESULT_CRITERIA[campaign.result]} className={cn("mt-1 inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold", RESULT_STYLE[campaign.result])}>{campaign.result}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-white">{campaign.name}</div>
-          <div className="mt-0.5 text-xs text-slate-400">{campaign.insight}</div>
+          <div className="text-sm font-semibold text-[#0d2b45]">{campaign.name}</div>
+          <div className="mt-0.5 text-xs text-slate-600">{campaign.insight}</div>
         </div>
         <div className="flex shrink-0 items-center gap-6 text-right">
           <div title="Mesajı açan/tıklayan müşteri oranı">
@@ -50,38 +50,38 @@ function CampaignRow({ campaign, expanded, onToggle }: { campaign: PastCampaign;
             <div className="text-[10px] text-slate-500">Dönüşüm</div>
           </div>
           <div className="w-24">
-            <div className="text-xs font-medium text-slate-300">{campaign.channel}</div>
+            <div className="text-xs font-medium text-slate-700">{campaign.channel}</div>
             <div className="text-[10px] text-slate-500">Kanal</div>
           </div>
-          <ChevronDown size={15} className={cn("text-slate-600 transition-transform", expanded && "rotate-180 text-fteal-light")} />
+          <ChevronDown size={15} className={cn("text-slate-500 transition-transform", expanded && "rotate-180 text-fteal-light")} />
         </div>
       </button>
 
       <AnimatePresence initial={false}>
         {expanded && d && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
-            <div className="border-t border-white/[.06] p-4">
+            <div className="border-t border-[#0d2b45]/[.06] p-4">
               <div className="grid gap-3 lg:grid-cols-3">
-                <div className="rounded-xl border border-white/[.06] bg-white/[.015] p-3.5">
+                <div className="rounded-xl border border-[#0d2b45]/[.06] bg-[#0d2b45]/[.015] p-3.5">
                   <div className="mb-2.5 flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-500"><Target size={11} className="text-fteal" /> Kampanya künyesi</div>
                   <div className="space-y-2.5 text-[11px] leading-4">
-                    <div><span className="text-slate-600">Amaç · </span><span className="text-slate-300">{d.objective}</span></div>
-                    <div><span className="text-slate-600">Segment · </span><span className="text-slate-300">{d.segment}</span></div>
-                    <div><span className="text-slate-600">Süre · </span><span className="text-slate-300">{d.duration}</span></div>
-                    <div><span className="text-slate-600">Erişim · </span><span className="text-slate-300">{d.reach}</span></div>
+                    <div><span className="text-slate-500">Amaç · </span><span className="text-slate-700">{d.objective}</span></div>
+                    <div><span className="text-slate-500">Segment · </span><span className="text-slate-700">{d.segment}</span></div>
+                    <div><span className="text-slate-500">Süre · </span><span className="text-slate-700">{d.duration}</span></div>
+                    <div><span className="text-slate-500">Erişim · </span><span className="text-slate-700">{d.reach}</span></div>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5">{d.departments.map((dep) => <span key={dep} className="rounded-full border border-white/[.08] bg-white/[.025] px-2 py-0.5 text-[9px] text-slate-400">{dep}</span>)}</div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">{d.departments.map((dep) => <span key={dep} className="rounded-full border border-[#0d2b45]/[.08] bg-[#0d2b45]/[.025] px-2 py-0.5 text-[9px] text-slate-600">{dep}</span>)}</div>
                 </div>
 
-                <div className="rounded-xl border border-white/[.06] bg-white/[.015] p-3.5">
+                <div className="rounded-xl border border-[#0d2b45]/[.06] bg-[#0d2b45]/[.015] p-3.5">
                   <div className="mb-2.5 flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-500"><Landmark size={11} className="text-fteal" /> KPI: hedef vs gerçekleşen</div>
                   <div className="space-y-2">
                     {d.kpis.map((kpi) => (
-                      <div key={kpi.label} className="flex items-center justify-between gap-3 rounded-lg border border-white/[.05] bg-[#061426]/60 px-2.5 py-2">
-                        <span className="text-[10px] text-slate-400">{kpi.label}</span>
+                      <div key={kpi.label} className="flex items-center justify-between gap-3 rounded-lg border border-[#0d2b45]/[.05] bg-[#ffffff]/60 px-2.5 py-2">
+                        <span className="text-[10px] text-slate-600">{kpi.label}</span>
                         <span className="flex items-center gap-2 font-mono text-[10px]">
-                          <span className="text-slate-600">{kpi.target}</span>
-                          <span className="text-slate-700">→</span>
+                          <span className="text-slate-500">{kpi.target}</span>
+                          <span className="text-slate-400">→</span>
                           <span className={kpi.hit ? "text-fgreen-light" : "text-coral"}>{kpi.actual}</span>
                           {kpi.hit ? <Check size={10} className="text-fgreen-light" /> : <X size={10} className="text-coral" />}
                         </span>
@@ -90,10 +90,10 @@ function CampaignRow({ campaign, expanded, onToggle }: { campaign: PastCampaign;
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-white/[.06] bg-white/[.015] p-3.5">
+                <div className="rounded-xl border border-[#0d2b45]/[.06] bg-[#0d2b45]/[.015] p-3.5">
                   <div className="mb-2.5 flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-500"><Users size={11} className="text-fteal" /> Haftalık dönüşüm eğrisi</div>
                   <Sparkline data={d.spark} tone={RESULT_TONE[campaign.result]} width={260} height={54} />
-                  <div className="mt-1.5 flex justify-between font-mono text-[8px] text-slate-600"><span>1. hafta</span><span>son hafta · %{d.spark[d.spark.length - 1]}</span></div>
+                  <div className="mt-1.5 flex justify-between font-mono text-[8px] text-slate-500"><span>1. hafta</span><span>son hafta · %{d.spark[d.spark.length - 1]}</span></div>
                 </div>
               </div>
 
@@ -101,10 +101,10 @@ function CampaignRow({ campaign, expanded, onToggle }: { campaign: PastCampaign;
                 <div className="mb-2 flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-amber"><Lightbulb size={11} /> Organizational memory'ye işlenen dersler</div>
                 <div className="space-y-1.5">
                   {d.learnings.map((learning) => (
-                    <div key={learning} className="flex gap-2 text-[11px] leading-4 text-slate-300"><span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber/70" />{learning}</div>
+                    <div key={learning} className="flex gap-2 text-[11px] leading-4 text-slate-700"><span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber/70" />{learning}</div>
                   ))}
                 </div>
-                <div className="mt-2.5 text-[9px] text-slate-600">Bu dersler yeni kampanya analizlerinde benzerlik ve kanal skorlarına otomatik yansıyor.</div>
+                <div className="mt-2.5 text-[9px] text-slate-500">Bu dersler yeni kampanya analizlerinde benzerlik ve kanal skorlarına otomatik yansıyor.</div>
               </div>
             </div>
           </motion.div>
@@ -128,18 +128,18 @@ export function HistoryPage() {
     <div className="mx-auto max-w-5xl px-8 py-6">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-white"><Archive size={20} className="text-fteal" /> Geçmiş Kampanyalar</h1>
-          <p className="mt-1 text-sm text-slate-400">Organizational memory'nin beslendiği kampanya arşivi — her sonuç bir sonraki kararı eğitiyor.</p>
+          <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-[#0d2b45]"><Archive size={20} className="text-fteal" /> Geçmiş Kampanyalar</h1>
+          <p className="mt-1 text-sm text-slate-600">Organizational memory'nin beslendiği kampanya arşivi — her sonuç bir sonraki kararı eğitiyor.</p>
         </div>
         <div className="flex items-center gap-1.5">
           {FILTERS.map((item) => {
             const count = item === "Tümü" ? pastCampaigns.length : pastCampaigns.filter((c) => c.result === item).length;
-            return <button key={item} onClick={() => setFilter(item)} className={cn("rounded-full border px-2.5 py-1 text-[10px] transition", filter === item ? "border-fteal/30 bg-fteal/[.08] text-fteal-light" : "border-white/[.07] text-slate-500 hover:border-white/[.14] hover:text-slate-300")}>{item} <span className="font-mono text-[9px] opacity-70">{count}</span></button>;
+            return <button key={item} onClick={() => setFilter(item)} className={cn("rounded-full border px-2.5 py-1 text-[10px] transition", filter === item ? "border-fteal/30 bg-fteal/[.08] text-fteal-light" : "border-[#0d2b45]/[.07] text-slate-500 hover:border-[#0d2b45]/[.14] hover:text-slate-700")}>{item} <span className="font-mono text-[9px] opacity-70">{count}</span></button>;
           })}
         </div>
       </div>
 
-      <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-fteal/15 bg-fteal/[.04] px-3.5 py-2.5 text-[11px] leading-4 text-slate-400">
+      <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-fteal/15 bg-fteal/[.04] px-3.5 py-2.5 text-[11px] leading-4 text-slate-600">
         <Info size={13} className="mt-0.5 shrink-0 text-fteal" />
         <span>
           <span className="font-semibold text-fteal-light">Açılma</span> — kampanya mesajı gönderilen müşterilerin mesajı açma/tıklama oranı; kanalın dikkat çekme gücünü ölçer (örn. 100.000 push gitti, 38.000'i açıldı → %38).{" "}
@@ -149,9 +149,9 @@ export function HistoryPage() {
 
       <div className="mb-5 grid gap-2 md:grid-cols-3">
         {(["Başarılı", "Kısmi", "Düşük"] as const).map((result, index) => (
-          <motion.div key={result} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }} className="flex items-start gap-2.5 rounded-xl border border-white/[.06] bg-white/[.015] px-3 py-2.5">
+          <motion.div key={result} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }} className="flex items-start gap-2.5 rounded-xl border border-[#0d2b45]/[.06] bg-[#0d2b45]/[.015] px-3 py-2.5">
             <span className={cn("mt-0.5 inline-block shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold", RESULT_STYLE[result])}>{result}</span>
-            <span className="text-[10px] leading-4 text-slate-400">{RESULT_CRITERIA[result]}</span>
+            <span className="text-[10px] leading-4 text-slate-600">{RESULT_CRITERIA[result]}</span>
           </motion.div>
         ))}
       </div>
@@ -164,7 +164,7 @@ export function HistoryPage() {
           { label: "Hafızaya işlenen ders", value: String(learningCount) },
         ].map((stat, index) => (
           <motion.div key={stat.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }} className="glass p-3.5">
-            <div className="font-mono text-xl font-bold text-white">{stat.value}</div>
+            <div className="font-mono text-xl font-bold text-[#0d2b45]">{stat.value}</div>
             <div className="mt-1 text-[10px] text-slate-500">{stat.label}</div>
           </motion.div>
         ))}

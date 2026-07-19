@@ -11,26 +11,27 @@ export default {
           700: "#0B2A5B",
           600: "#123A6E",
         },
+        // Fibabanka açık tema: mavi (kurumsal) + limon yeşili (aksiyon)
         fteal: {
-          DEFAULT: "#2FB6A6",
-          light: "#4FD8C7",
-          dim: "#1E7A70",
+          DEFAULT: "#0069B4",
+          light: "#0A79C4",
+          dim: "#004E86",
         },
         fgreen: {
-          DEFAULT: "#8DC63F",
-          light: "#A8DC62",
+          DEFAULT: "#7AB929",
+          light: "#568D12",
         },
-        coral: "#E85D75",
-        amber: "#F0B429",
+        coral: "#D3365F",
+        amber: "#B45309",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
       boxShadow: {
-        "glow-teal": "0 0 24px -4px rgba(47,182,166,0.45)",
-        "glow-teal-sm": "0 0 12px -2px rgba(47,182,166,0.35)",
-        "glow-green": "0 0 20px -4px rgba(141,198,63,0.4)",
+        "glow-teal": "0 0 24px -4px rgba(0,105,180,0.25)",
+        "glow-teal-sm": "0 0 12px -2px rgba(0,105,180,0.18)",
+        "glow-green": "0 0 20px -4px rgba(122,185,41,0.3)",
       },
       animation: {
         "spin-slow": "spin 9s linear infinite",

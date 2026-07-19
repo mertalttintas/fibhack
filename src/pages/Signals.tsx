@@ -23,7 +23,7 @@ function SignalCard({ signal, index }: { signal: TrendSignal; index: number }) {
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <div className="text-sm font-semibold text-white leading-snug">{signal.title}</div>
+          <div className="text-sm font-semibold text-[#0d2b45] leading-snug">{signal.title}</div>
           <div className="text-[11px] text-slate-500 mt-1">{signal.source}</div>
         </div>
         <div className={cn("flex items-center gap-1 font-bold font-mono text-xl shrink-0", TONE_TEXT[signal.tone])}>
@@ -32,13 +32,13 @@ function SignalCard({ signal, index }: { signal: TrendSignal; index: number }) {
         </div>
       </div>
       <Sparkline data={signal.spark} tone={signal.tone} width={280} height={44} />
-      <div className="mt-4 flex gap-2 items-start bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5">
+      <div className="mt-4 flex gap-2 items-start bg-[#0d2b45]/[0.03] border border-[#0d2b45]/[0.07] rounded-xl px-3 py-2.5">
         <Lightbulb size={14} className={cn("shrink-0 mt-0.5", falling ? "text-coral" : "text-amber")} />
         <div>
           <span className={cn("text-[10px] uppercase tracking-wider font-bold block mb-0.5", falling ? "text-coral" : "text-amber")}>
             {falling ? "Önerilen önlem" : "Önerilen aksiyon"}
           </span>
-          <span className="text-xs text-slate-300 leading-snug">{signal.action}</span>
+          <span className="text-xs text-slate-700 leading-snug">{signal.action}</span>
         </div>
       </div>
     </motion.div>
@@ -51,13 +51,13 @@ export function Signals() {
   return (
     <div className="px-8 py-6 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white tracking-tight">Proaktif Talep Sinyalleri</h1>
-        <p className="text-sm text-slate-400 mt-1">
+        <h1 className="text-2xl font-bold text-[#0d2b45] tracking-tight">Proaktif Talep Sinyalleri</h1>
+        <p className="text-sm text-slate-600 mt-1">
           Mobil bankacılık kullanımı + mevsimsellik + piyasa trendlerinden üretilen fırsat ve risk sinyalleri.
         </p>
       </div>
 
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#0d2b45]">
         <TrendingUp size={15} className="text-fgreen" /> Yükselen sinyaller
         <span className="font-mono text-[10px] text-slate-500">{rising.length} sinyal · fırsat penceresi</span>
       </div>
@@ -65,7 +65,7 @@ export function Signals() {
         {rising.map((s, i) => <SignalCard key={s.id} signal={s} index={i} />)}
       </div>
 
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#0d2b45]">
         <TrendingDown size={15} className="text-coral" /> Düşen sinyaller
         <span className="font-mono text-[10px] text-slate-500">{falling.length} sinyal · kanal/ürün riski</span>
       </div>
@@ -85,16 +85,16 @@ export function Signals() {
         >
           <div className="flex items-center gap-2 mb-4">
             <LayoutGrid size={15} className="text-fteal" />
-            <span className="text-sm font-semibold text-white">Bu ay en çok kullanılan sekmeler</span>
+            <span className="text-sm font-semibold text-[#0d2b45]">Bu ay en çok kullanılan sekmeler</span>
           </div>
           <div className="space-y-3">
             {topTabs.map((t, i) => (
               <div key={i}>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-300">{t.label}</span>
+                  <span className="text-slate-700">{t.label}</span>
                   <span className="text-slate-500 font-mono">{t.value}</span>
                 </div>
-                <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+                <div className="h-1.5 bg-[#0d2b45]/[0.05] rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${t.value}%` }}
@@ -115,7 +115,7 @@ export function Signals() {
         >
           <div className="flex items-center gap-2 mb-4">
             <Search size={15} className="text-fteal" />
-            <span className="text-sm font-semibold text-white">En çok aranan terimler</span>
+            <span className="text-sm font-semibold text-[#0d2b45]">En çok aranan terimler</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {topSearches.map((s, i) => (
@@ -131,7 +131,7 @@ export function Signals() {
               </motion.span>
             ))}
           </div>
-          <div className="mt-5 text-xs text-slate-400 bg-fteal/[0.06] border border-fteal/20 rounded-xl px-3 py-2.5 leading-relaxed">
+          <div className="mt-5 text-xs text-slate-600 bg-fteal/[0.06] border border-fteal/20 rounded-xl px-3 py-2.5 leading-relaxed">
             <span className="text-fteal font-semibold">AI notu: </span>
             "kira öderken puan" aramalarındaki artış, genç segment kredi kartı kampanyası için talebin
             organik olarak oluştuğunu gösteriyor — lansman zamanlaması ideal. Öte yandan 18-30 segmentte

@@ -73,19 +73,19 @@ function Corners() {
 function Core({ running, percent, failed }: { running: boolean; percent: number; failed: boolean }) {
   return (
     <div className="relative mx-auto h-56 w-56 shrink-0">
-      {running && <motion.div className="absolute inset-0 rounded-full" style={{ background: "conic-gradient(from 0deg, rgba(83,219,195,.30), transparent 70deg)" }} animate={{ rotate: 360 }} transition={{ duration: 2.4, repeat: Infinity, ease: "linear" }} />}
+      {running && <motion.div className="absolute inset-0 rounded-full" style={{ background: "conic-gradient(from 0deg, rgba(0,105,180,.30), transparent 70deg)" }} animate={{ rotate: 360 }} transition={{ duration: 2.4, repeat: Infinity, ease: "linear" }} />}
       <motion.div className="absolute inset-0 rounded-full border border-dashed border-fteal/25" animate={running ? { rotate: 360 } : { rotate: 0 }} transition={{ duration: 16, repeat: running ? Infinity : 0, ease: "linear" }} />
       <motion.div className="absolute inset-4 rounded-full border border-fteal/15" animate={running ? { rotate: -360 } : { rotate: 0 }} transition={{ duration: 9, repeat: running ? Infinity : 0, ease: "linear" }}>
-        <span className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-fgreen shadow-[0_0_10px_#A7E052]" />
+        <span className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-fgreen shadow-[0_0_10px_#7AB929]" />
       </motion.div>
       <motion.div className="absolute inset-9 rounded-full border border-dashed border-fgreen/20" animate={running ? { rotate: 360 } : { rotate: 0 }} transition={{ duration: 5.5, repeat: running ? Infinity : 0, ease: "linear" }}>
-        <span className="absolute -right-0.5 top-1/2 h-1.5 w-1.5 rounded-full bg-fteal shadow-[0_0_8px_#53DBC3]" />
+        <span className="absolute -right-0.5 top-1/2 h-1.5 w-1.5 rounded-full bg-fteal shadow-[0_0_8px_#0069B4]" />
       </motion.div>
-      <div className={cn("absolute inset-[54px] rounded-full border bg-[#07192d]/92", failed ? "border-coral/40" : "border-fteal/30")} />
-      {running && <motion.div className="absolute inset-[54px] rounded-full" animate={{ boxShadow: ["0 0 20px rgba(83,219,195,.10)", "0 0 55px rgba(83,219,195,.35)", "0 0 20px rgba(83,219,195,.10)"] }} transition={{ duration: 1.8, repeat: Infinity }} />}
+      <div className={cn("absolute inset-[54px] rounded-full border bg-[#f3f8fc]/92", failed ? "border-coral/40" : "border-fteal/30")} />
+      {running && <motion.div className="absolute inset-[54px] rounded-full" animate={{ boxShadow: ["0 0 20px rgba(0,105,180,.10)", "0 0 55px rgba(0,105,180,.35)", "0 0 20px rgba(0,105,180,.10)"] }} transition={{ duration: 1.8, repeat: Infinity }} />}
       <div className="absolute inset-0 grid place-items-center text-center">
         <div>
-          <div className="font-mono text-4xl font-semibold tracking-tight text-white">{percent}<span className="text-lg text-fteal-light">%</span></div>
+          <div className="font-mono text-4xl font-semibold tracking-tight text-[#0d2b45]">{percent}<span className="text-lg text-fteal-light">%</span></div>
           <div className={cn("mt-1 font-mono text-[8px] uppercase tracking-[.28em]", failed ? "text-coral" : "text-slate-500")}>{failed ? "kesinti" : running ? "işleniyor" : "tamamlandı"}</div>
         </div>
       </div>
@@ -104,11 +104,11 @@ function Rail({ events, running }: { events: TraceEvent[]; running: boolean }) {
         const isRunning = event?.status === "running";
         return (
           <div key={id} className={cn("flex items-center gap-2.5 rounded-lg border px-2.5 py-1.5 transition", event ? "border-fteal/12 bg-fteal/[.03]" : isNext ? "border-fteal/25 bg-fteal/[.05]" : "border-transparent opacity-40")}>
-            <span className="w-4 font-mono text-[8px] text-slate-600">{String(index + 1).padStart(2, "0")}</span>
+            <span className="w-4 font-mono text-[8px] text-slate-500">{String(index + 1).padStart(2, "0")}</span>
             <span className="grid h-4 w-4 place-items-center">
-              {isRunning || isNext ? <LoaderCircle size={11} className="animate-spin text-fteal-light" /> : event?.status === "error" ? <AlertTriangle size={10} className="text-coral" /> : event ? <Check size={11} className="text-fgreen-light" /> : <span className="h-1 w-1 rounded-full bg-slate-700" />}
+              {isRunning || isNext ? <LoaderCircle size={11} className="animate-spin text-fteal-light" /> : event?.status === "error" ? <AlertTriangle size={10} className="text-coral" /> : event ? <Check size={11} className="text-fgreen-light" /> : <span className="h-1 w-1 rounded-full bg-slate-400" />}
             </span>
-            <span className={cn("flex-1 text-[10px] font-medium", event || isNext ? "text-slate-200" : "text-slate-600")}>{label}</span>
+            <span className={cn("flex-1 text-[10px] font-medium", event || isNext ? "text-slate-800" : "text-slate-500")}>{label}</span>
             {typeof event?.score === "number" && <span className="font-mono text-[8px] text-fteal-light">{event.score}</span>}
           </div>
         );
@@ -120,11 +120,11 @@ function Rail({ events, running }: { events: TraceEvent[]; running: boolean }) {
 function StageCard({ event, expanded, onSelect }: { event: TraceEvent; expanded: boolean; onSelect: () => void }) {
   if (!expanded) {
     return (
-      <motion.button layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} onClick={onSelect} className="flex w-full items-center gap-3 rounded-xl border border-white/[.05] bg-white/[.015] px-3 py-2 text-left transition hover:border-fteal/25 hover:bg-fteal/[.03]">
+      <motion.button layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} onClick={onSelect} className="flex w-full items-center gap-3 rounded-xl border border-[#0d2b45]/[.05] bg-[#0d2b45]/[.015] px-3 py-2 text-left transition hover:border-fteal/25 hover:bg-fteal/[.03]">
         {event.status === "error" ? <AlertTriangle size={11} className="shrink-0 text-coral" /> : <Check size={11} className="shrink-0 text-fgreen-light" />}
-        <span className="text-[10px] font-medium text-slate-300">{event.label}</span>
-        {event.algorithm && <span className="hidden truncate font-mono text-[8px] text-slate-600 md:block">{event.algorithm}</span>}
-        <span className="ml-auto shrink-0 font-mono text-[8px] text-slate-700">{clock(event.timestamp)}</span>
+        <span className="text-[10px] font-medium text-slate-700">{event.label}</span>
+        {event.algorithm && <span className="hidden truncate font-mono text-[8px] text-slate-500 md:block">{event.algorithm}</span>}
+        <span className="ml-auto shrink-0 font-mono text-[8px] text-slate-400">{clock(event.timestamp)}</span>
         {typeof event.score === "number" && <span className="shrink-0 rounded border border-fteal/20 px-1.5 py-0.5 font-mono text-[8px] text-fteal-light">{event.score}/100</span>}
       </motion.button>
     );
@@ -138,35 +138,35 @@ function StageCard({ event, expanded, onSelect }: { event: TraceEvent; expanded:
             {event.status === "running" ? <LoaderCircle size={10} className="animate-spin" /> : event.status === "error" ? <AlertTriangle size={10} className="text-coral" /> : <Check size={10} className="text-fgreen-light" />}
             {clock(event.timestamp)} · aktif aşama
           </div>
-          <div className="mt-1.5 text-sm font-semibold text-white">{event.label}</div>
-          <div className="mt-1 min-h-[28px] text-[10px] leading-4 text-slate-400"><Typewriter text={event.detail} /></div>
+          <div className="mt-1.5 text-sm font-semibold text-[#0d2b45]">{event.label}</div>
+          <div className="mt-1 min-h-[28px] text-[10px] leading-4 text-slate-600"><Typewriter text={event.detail} /></div>
         </div>
         {typeof event.score === "number" && (
           <div className="shrink-0 text-right">
-            <div className="font-mono text-3xl font-semibold text-white"><CountUp value={event.score} /></div>
-            <div className="font-mono text-[7px] uppercase tracking-[.2em] text-slate-600">güven skoru</div>
+            <div className="font-mono text-3xl font-semibold text-[#0d2b45]"><CountUp value={event.score} /></div>
+            <div className="font-mono text-[7px] uppercase tracking-[.2em] text-slate-500">güven skoru</div>
           </div>
         )}
       </div>
 
       {event.algorithm && (
-        <div className="mt-3 rounded-xl border border-white/[.06] bg-[#061426]/60 p-3">
+        <div className="mt-3 rounded-xl border border-[#0d2b45]/[.06] bg-[#ffffff]/60 p-3">
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5 rounded-md border border-fgreen/20 bg-fgreen/[.05] px-2 py-1 font-mono text-[9px] text-fgreen-light"><Cpu size={10} /> {event.algorithm}</span>
-            <span className="font-mono text-[7px] uppercase tracking-[.18em] text-slate-600">neden bu yöntem?</span>
+            <span className="font-mono text-[7px] uppercase tracking-[.18em] text-slate-500">neden bu yöntem?</span>
           </div>
-          {event.why && <p className="mt-2 border-l-2 border-fteal/25 pl-3 text-[10px] leading-[17px] text-slate-400">{event.why}</p>}
+          {event.why && <p className="mt-2 border-l-2 border-fteal/25 pl-3 text-[10px] leading-[17px] text-slate-600">{event.why}</p>}
         </div>
       )}
 
       {event.method?.length ? (
-        <div className="mt-2.5 rounded-xl border border-white/[.06] bg-[#061426]/60 p-3">
-          <div className="mb-2 font-mono text-[7px] uppercase tracking-[.18em] text-slate-600">nasıl analiz etti?</div>
+        <div className="mt-2.5 rounded-xl border border-[#0d2b45]/[.06] bg-[#ffffff]/60 p-3">
+          <div className="mb-2 font-mono text-[7px] uppercase tracking-[.18em] text-slate-500">nasıl analiz etti?</div>
           <div className="space-y-1.5">
             {event.method.map((step, index) => (
               <motion.div key={step} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .2 + index * .18 }} className="flex gap-2.5">
                 <span className="mt-px grid h-4 w-4 shrink-0 place-items-center rounded border border-fteal/25 bg-fteal/[.06] font-mono text-[8px] text-fteal-light">{index + 1}</span>
-                <span className="text-[10px] leading-4 text-slate-300">{step}</span>
+                <span className="text-[10px] leading-4 text-slate-700">{step}</span>
               </motion.div>
             ))}
           </div>
@@ -175,14 +175,14 @@ function StageCard({ event, expanded, onSelect }: { event: TraceEvent; expanded:
 
       {(event.inputs?.length || event.outputs?.length) ? (
         <div className="mt-2.5 grid gap-2 md:grid-cols-[1fr_auto_1fr]">
-          <div className="min-w-0 rounded-xl border border-fteal/12 bg-[#061426]/70 p-3">
+          <div className="min-w-0 rounded-xl border border-fteal/12 bg-[#ffffff]/70 p-3">
             <div className="mb-2 flex items-center gap-1.5 font-mono text-[7px] uppercase tracking-[.18em] text-fteal">▸ kullanılan veri</div>
-            <div className="space-y-1.5">{(event.inputs ?? []).map((item, index) => <motion.div key={item} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .25 + index * .12 }} className="flex gap-2 text-[9px] leading-4 text-slate-400"><span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-fteal/60" />{item}</motion.div>)}</div>
+            <div className="space-y-1.5">{(event.inputs ?? []).map((item, index) => <motion.div key={item} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .25 + index * .12 }} className="flex gap-2 text-[9px] leading-4 text-slate-600"><span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-fteal/60" />{item}</motion.div>)}</div>
           </div>
           <div className="hidden place-items-center text-fteal md:grid"><motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 1.1, repeat: Infinity }}><ArrowRight size={15} /></motion.div></div>
-          <div className="min-w-0 rounded-xl border border-fgreen/12 bg-[#061426]/70 p-3">
+          <div className="min-w-0 rounded-xl border border-fgreen/12 bg-[#ffffff]/70 p-3">
             <div className="mb-2 flex items-center gap-1.5 font-mono text-[7px] uppercase tracking-[.18em] text-fgreen-light">✓ üretilen bulgu</div>
-            <div className="space-y-1.5">{(event.outputs ?? []).map((item, index) => <motion.div key={item} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .4 + index * .12 }} className="flex gap-2 text-[9px] leading-4 text-slate-300"><span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-fgreen/70" />{item}</motion.div>)}</div>
+            <div className="space-y-1.5">{(event.outputs ?? []).map((item, index) => <motion.div key={item} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .4 + index * .12 }} className="flex gap-2 text-[9px] leading-4 text-slate-700"><span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-fgreen/70" />{item}</motion.div>)}</div>
           </div>
         </div>
       ) : null}
@@ -190,7 +190,7 @@ function StageCard({ event, expanded, onSelect }: { event: TraceEvent; expanded:
       {event.meaning && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .55 }} className="mt-2.5 flex items-start gap-2.5 rounded-xl border border-amber/20 bg-amber/[.05] p-3">
           <Lightbulb size={13} className="mt-0.5 shrink-0 text-amber" />
-          <div><span className="font-mono text-[7px] uppercase tracking-[.18em] text-amber">bu sonuç ne anlama geliyor?</span><p className="mt-1 text-[10px] leading-4 text-slate-300">{event.meaning}</p></div>
+          <div><span className="font-mono text-[7px] uppercase tracking-[.18em] text-amber">bu sonuç ne anlama geliyor?</span><p className="mt-1 text-[10px] leading-4 text-slate-700">{event.meaning}</p></div>
         </motion.div>
       )}
     </motion.div>
@@ -253,9 +253,9 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
   const expandedId = manualId && visible.some((event) => event.id === manualId) ? manualId : latest?.id;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] overflow-y-auto bg-[#030b16]/95 backdrop-blur-md">
-      <div className="pointer-events-none fixed inset-0" style={{ backgroundImage: "linear-gradient(rgba(83,219,195,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(83,219,195,.035) 1px, transparent 1px)", backgroundSize: "44px 44px" }} />
-      <div className="pointer-events-none fixed inset-0" style={{ backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px)" }} />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] overflow-y-auto bg-[#f2f7fb]/95 backdrop-blur-md">
+      <div className="pointer-events-none fixed inset-0" style={{ backgroundImage: "linear-gradient(rgba(0,105,180,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(0,105,180,.035) 1px, transparent 1px)", backgroundSize: "44px 44px" }} />
+      <div className="pointer-events-none fixed inset-0" style={{ backgroundImage: "repeating-linear-gradient(0deg, rgba(13,43,69,.012) 0 1px, transparent 1px 3px)" }} />
 
       <div className="relative mx-auto flex min-h-full max-w-[1240px] flex-col px-6 py-5">
         <header className="flex items-start justify-between gap-4">
@@ -264,20 +264,20 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
               <motion.span className="h-1.5 w-1.5 rounded-full bg-fteal" animate={running ? { opacity: [.3, 1, .3] } : {}} transition={{ duration: 1, repeat: Infinity }} />
               AI karar motoru · {mode === "replay" ? "kayıt tekrarı" : failed ? "kesinti" : running ? "canlı yayın" : "tamamlandı"}
             </div>
-            <h2 className="mt-2 max-w-xl text-lg font-semibold leading-6 text-white">{title}</h2>
+            <h2 className="mt-2 max-w-xl text-lg font-semibold leading-6 text-[#0d2b45]">{title}</h2>
           </div>
           <div className="flex items-center gap-3">
             {!running && events.length > 0 && <button onClick={restart} className="flex items-center gap-1.5 rounded-lg border border-fteal/25 bg-fteal/[.06] px-3 py-2 text-[10px] font-semibold text-fteal-light transition hover:bg-fteal/10"><RotateCcw size={12} /> Baştan izle</button>}
-            <div className="rounded-lg border border-white/[.08] bg-white/[.02] px-3 py-1.5 text-right">
+            <div className="rounded-lg border border-[#0d2b45]/[.08] bg-[#0d2b45]/[.02] px-3 py-1.5 text-right">
               <div className="font-mono text-sm text-fteal-light">{elapsed.toFixed(1)}s</div>
-              <div className="font-mono text-[7px] uppercase tracking-[.2em] text-slate-600">geçen süre</div>
+              <div className="font-mono text-[7px] uppercase tracking-[.2em] text-slate-500">geçen süre</div>
             </div>
-            <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:border-white/25 hover:text-white"><X size={15} /></button>
+            <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg border border-[#0d2b45]/10 text-slate-600 transition hover:border-[#0d2b45]/25 hover:text-[#0d2b45]"><X size={15} /></button>
           </div>
         </header>
 
         <div className="mt-5 grid flex-1 gap-5 lg:grid-cols-[320px_1fr]">
-          <aside className="relative rounded-2xl border border-fteal/15 bg-[#07192d]/70 p-4">
+          <aside className="relative rounded-2xl border border-fteal/15 bg-[#f3f8fc]/70 p-4">
             <Corners />
             <Core running={running} percent={percent} failed={failed} />
             <div className="mt-4 mb-2 flex items-center gap-2 font-mono text-[8px] uppercase tracking-[.2em] text-slate-500"><BrainCircuit size={11} className="text-fteal" /> işlem hattı</div>
@@ -285,7 +285,7 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
           </aside>
 
           <section className="flex min-h-0 flex-col">
-            <div ref={streamRef} className="relative max-h-[calc(100vh-290px)] min-h-[320px] flex-1 space-y-2 overflow-y-auto rounded-2xl border border-white/[.06] bg-[#061426]/60 p-4">
+            <div ref={streamRef} className="relative max-h-[calc(100vh-290px)] min-h-[320px] flex-1 space-y-2 overflow-y-auto rounded-2xl border border-[#0d2b45]/[.06] bg-[#ffffff]/60 p-4">
               <Corners />
               <AnimatePresence initial={false}>
                 {visible.map((event) => <StageCard key={event.id} event={event} expanded={event.id === expandedId} onSelect={() => setManualId(event.id === manualId ? null : event.id)} />)}
@@ -308,7 +308,7 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={restart} className="flex items-center gap-1.5 rounded-xl border border-fteal/25 bg-fteal/[.06] px-3 py-2.5 text-xs font-semibold text-fteal-light transition hover:bg-fteal/10"><RotateCcw size={12} /> Baştan izle</button>
-                    <button onClick={onClose} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-fteal to-fgreen px-4 py-2.5 text-xs font-bold text-[#061426]">Görev panosuna dön <ArrowRight size={13} /></button>
+                    <button onClick={onClose} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-fteal to-fgreen px-4 py-2.5 text-xs font-bold text-[#ffffff]">Görev panosuna dön <ArrowRight size={13} /></button>
                   </div>
                 </motion.div>
               )}
@@ -320,10 +320,10 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
               )}
             </div>
 
-            <div className="mt-3 rounded-xl border border-white/[.06] bg-[#040f1d]/90 px-3 py-2 font-mono text-[8px] leading-4">
-              <div className="mb-1 flex items-center justify-between text-slate-600"><span className="uppercase tracking-[.2em]">sistem günlüğü</span><span>{visible.length} olay</span></div>
+            <div className="mt-3 rounded-xl border border-[#0d2b45]/[.06] bg-[#eef4f9]/90 px-3 py-2 font-mono text-[8px] leading-4">
+              <div className="mb-1 flex items-center justify-between text-slate-500"><span className="uppercase tracking-[.2em]">sistem günlüğü</span><span>{visible.length} olay</span></div>
               {visible.slice(-4).map((event) => <div key={event.id} className="truncate text-fgreen-light/60">[{clock(event.timestamp)}] {event.status === "error" ? "✕" : "✓"} {event.label} :: {event.detail}</div>)}
-              {visible.length === 0 && <div className="text-slate-700">[--:--:--] bağlantı bekleniyor…</div>}
+              {visible.length === 0 && <div className="text-slate-400">[--:--:--] bağlantı bekleniyor…</div>}
             </div>
           </section>
         </div>

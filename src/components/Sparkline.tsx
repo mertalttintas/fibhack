@@ -1,8 +1,8 @@
 const TONES: Record<string, string> = {
-  teal: "#2FB6A6",
+  teal: "#0069B4",
   green: "#8DC63F",
-  amber: "#F0B429",
-  coral: "#E85D75",
+  amber: "#C77700",
+  coral: "#D3365F",
 };
 
 export function Sparkline({
