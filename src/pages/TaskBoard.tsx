@@ -49,20 +49,40 @@ function time(value: string) {
   return new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
-function NeuralCore({ active }: { active: boolean }) {
-  const nodes = [
-    [18, 48], [34, 22], [35, 75], [52, 44], [66, 20], [69, 70], [84, 43],
-  ];
-  const links = [[0,1],[0,2],[0,3],[1,3],[1,4],[2,3],[2,5],[3,4],[3,5],[3,6],[4,6],[5,6]];
+const SUMMARY_STAGES: { id: string; label: string }[] = [
+  { id: "signals", label: "Talep momentumu" },
+  { id: "memory", label: "En yakın geçmiş kampanya" },
+  { id: "channels", label: "Kanal önerisi" },
+  { id: "timing", label: "Lansman penceresi" },
+  { id: "rules", label: "Mevzuat kontrolü" },
+];
+
+function AnalysisSummary({ trace, processing, onOpenTheater }: { trace: TraceEvent[]; processing: boolean; onOpenTheater: () => void }) {
+  const rows = SUMMARY_STAGES.map(({ id, label }) => ({ id, label, event: trace.find((event) => event.id === id) }));
+  const hasAny = trace.length > 0;
   return (
-    <div className="relative h-44 overflow-hidden rounded-2xl border border-fteal/15 bg-[#ffffff]">
-      <div className={cn("absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,105,180,.16),transparent_45%)] transition-opacity", active ? "opacity-100" : "opacity-40")} />
-      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
-        {links.map(([a,b], index) => <motion.line key={index} x1={nodes[a][0]} y1={nodes[a][1]} x2={nodes[b][0]} y2={nodes[b][1]} stroke="#0069B4" strokeWidth=".45" initial={false} animate={{ opacity: active ? [.12,.55,.12] : .1 }} transition={{ duration: 1.8, delay: index * .08, repeat: active ? Infinity : 0 }} />)}
-        {nodes.map(([x,y], index) => <g key={index}><motion.circle cx={x} cy={y} r={index === 3 ? 4.2 : 2.2} fill={index === 3 ? "#7AB929" : "#0069B4"} animate={active ? { r: index === 3 ? [3.4,5,3.4] : [1.7,2.8,1.7], opacity: [.55,1,.55] } : { opacity: .4 }} transition={{ duration: 1.5 + index * .09, repeat: active ? Infinity : 0 }} /><circle cx={x} cy={y} r={index === 3 ? 8 : 5} fill="none" stroke={index === 3 ? "#7AB929" : "#0069B4"} strokeWidth=".35" opacity=".22" /></g>)}
-      </svg>
-      <div className="absolute inset-0 grid place-items-center"><div className="mt-1 rounded-full border border-fteal/25 bg-[#f3f8fc]/85 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[.18em] text-fteal-light backdrop-blur">{active ? "Neural orchestration active" : "AI core standby"}</div></div>
-      {active && <motion.div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-fteal/60 to-transparent" animate={{ top: ["5%", "95%", "5%"] }} transition={{ duration: 3.2, repeat: Infinity, ease: "linear" }} />}
+    <div className="flex h-full flex-col rounded-2xl border border-[#0d2b45]/[.06] bg-[#ffffff]/70 p-4">
+      <div className="mb-3 flex items-center justify-between border-b border-[#0d2b45]/[.06] pb-3">
+        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.16em] text-slate-500"><BrainCircuit size={13} className="text-fteal" /> Analiz özeti</div>
+        {hasAny && <button onClick={onOpenTheater} className="flex items-center gap-1.5 rounded-lg border border-fteal/25 bg-fteal/[.06] px-2.5 py-1.5 text-[10px] font-semibold text-fteal-light transition hover:bg-fteal/10"><Zap size={11} /> Akışı izle</button>}
+      </div>
+      {!hasAny ? (
+        <div className="grid flex-1 place-items-center py-10 text-center text-[11px] leading-5 text-slate-500">"AI ile işle" başlatıldığında<br />analiz bulguları burada özetlenir.</div>
+      ) : (
+        <div className="space-y-2">
+          {rows.map(({ id, label, event }) => (
+            <div key={id} className={cn("flex items-start gap-3 rounded-xl border p-3", event ? "border-[#0d2b45]/[.06] bg-[#0d2b45]/[.015]" : "border-dashed border-[#0d2b45]/[.08] opacity-50")}>
+              <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border border-fgreen/25 bg-fgreen/[.06]">{event ? <Check size={11} className="text-fgreen-light" /> : <LoaderCircle size={11} className={cn("text-slate-400", processing && "animate-spin")} />}</span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-semibold text-slate-700">{label}</div>
+                <div className="mt-0.5 line-clamp-2 text-[10px] leading-4 text-slate-500">{event ? event.detail : "Hesaplanıyor…"}</div>
+              </div>
+              {typeof event?.score === "number" && <span className="shrink-0 rounded-md border border-fteal/20 bg-fteal/[.05] px-1.5 py-0.5 font-mono text-[9px] text-fteal-light">{event.score}</span>}
+            </div>
+          ))}
+          {processing && <div className="flex items-center gap-2 px-1 pt-1 text-[10px] text-fteal-light"><LoaderCircle size={11} className="animate-spin" /> Analiz sürüyor — tüm aşamalar için "Akışı izle"</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -89,24 +109,6 @@ function PipelineRibbon({ events }: { events: TraceEvent[] }) {
     ["timing", "Zamanlama"], ["rules", "Risk"], ["model", "AI sentez"], ["validation", "4/4 kontrol"], ["dispatch", "Dağıtım"],
   ];
   return <div className="grid grid-cols-5 gap-1.5 xl:grid-cols-10">{stages.map(([id, label], index) => { const event = events.find((item) => item.id === id); return <div key={id} className={cn("relative overflow-hidden rounded-xl border px-2 py-2.5 transition", event?.status === "done" ? "border-fgreen/18 bg-fgreen/[.035]" : event?.status === "running" ? "border-fteal/30 bg-fteal/[.07]" : "border-[#0d2b45]/[.055] bg-[#0d2b45]/[.015]")}><div className="mb-1 flex items-center justify-between"><span className="font-mono text-[7px] text-slate-400">{String(index + 1).padStart(2, "0")}</span>{event?.status === "done" ? <Check size={8} className="text-fgreen-light" /> : event?.status === "running" ? <LoaderCircle size={8} className="animate-spin text-fteal" /> : <span className="h-1 w-1 rounded-full bg-slate-300" />}</div><div className={cn("truncate text-[8px] font-medium", event ? "text-slate-700" : "text-slate-400")}>{label}</div>{event?.status === "running" && <motion.div className="absolute inset-x-0 bottom-0 h-px bg-fteal" animate={{ opacity: [.25,1,.25] }} transition={{ duration: 1, repeat: Infinity }} />}</div>; })}</div>;
-}
-
-function Trace({ events, processing, selectedId, onSelect }: { events: TraceEvent[]; processing: boolean; selectedId?: string; onSelect: (id: string) => void }) {
-  return (
-    <div className="relative space-y-1.5">
-      <div className="absolute bottom-4 left-[15px] top-4 w-px bg-gradient-to-b from-fteal/45 via-fteal/15 to-transparent" />
-      <AnimatePresence initial={false}>
-        {events.map((event) => <motion.button onClick={() => onSelect(event.id)} key={event.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className={cn("relative flex w-full gap-3 rounded-xl border px-1.5 py-2 text-left transition", selectedId === event.id ? "border-fteal/20 bg-fteal/[.045]" : "border-transparent hover:bg-[#0d2b45]/[.02]")}><div className={cn("relative z-10 grid h-7 w-7 shrink-0 place-items-center rounded-lg border bg-[#ffffff]", event.status === "running" ? "border-fteal/35 text-fteal-light" : event.status === "error" ? "border-coral/35 text-coral" : "border-fgreen/25 text-fgreen-light")}>{event.status === "running" ? <LoaderCircle size={12} className="animate-spin" /> : event.status === "error" ? <AlertTriangle size={11} /> : <Check size={11} />}</div><div className="min-w-0 flex-1 pt-0.5"><div className="text-[11px] font-medium text-slate-800">{event.label}</div><div className="mt-0.5 line-clamp-2 text-[9px] leading-4 text-slate-500">{event.detail}</div></div>{typeof event.score === "number" && <span className="mt-1 shrink-0 rounded-md border border-[#0d2b45]/[.07] px-1.5 py-0.5 font-mono text-[8px] text-slate-500">{event.score}/100</span>}</motion.button>)}
-      </AnimatePresence>
-      {events.length === 0 && <div className="py-8 text-center text-[10px] text-slate-400">İşlem başladığında doğrulanabilir sistem olayları burada akacak.</div>}
-      {processing && <div className="ml-10 flex items-center gap-2 pt-1 text-[9px] text-fteal-light"><span className="flex gap-0.5">{[0,1,2].map((i) => <motion.span key={i} className="h-1 w-1 rounded-full bg-fteal" animate={{ opacity: [.2,1,.2] }} transition={{ duration: .9, delay: i*.16, repeat: Infinity }} />)}</span> Sonraki olay bekleniyor</div>}
-    </div>
-  );
-}
-
-function AlgorithmInspector({ event }: { event?: TraceEvent }) {
-  if (!event) return <div className="mt-3 grid min-h-36 place-items-center rounded-xl border border-dashed border-[#0d2b45]/[.06] text-[9px] text-slate-400">Bir analiz aşaması seçin</div>;
-  return <motion.div key={event.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="mt-3 rounded-xl border border-fteal/12 bg-gradient-to-br from-fteal/[.045] to-transparent p-3.5"><div className="flex items-start justify-between gap-3"><div><div className="text-[8px] font-semibold uppercase tracking-[.16em] text-fteal">Kullanılan algoritma</div><div className="mt-1 text-[11px] font-semibold text-slate-800">{event.algorithm ?? "Sistem işlemi"}</div></div>{typeof event.score === "number" && <div className="text-right"><div className="font-mono text-lg font-semibold text-[#0d2b45]">{event.score}</div><div className="text-[7px] uppercase text-slate-400">skor</div></div>}</div>{event.why && <div className="mt-3 border-l border-fteal/25 pl-3"><div className="text-[8px] uppercase tracking-wider text-slate-500">Neden kullanıldı?</div><p className="mt-1 text-[9px] leading-4 text-slate-600">{event.why}</p></div>}<div className="mt-3 grid grid-cols-2 gap-2"><div className="rounded-lg border border-[#0d2b45]/[.05] bg-[#ffffff]/70 p-2.5"><div className="mb-1.5 text-[7px] font-semibold uppercase tracking-wider text-slate-400">Girdiler</div>{(event.inputs ?? []).map((item) => <div key={item} className="mt-1 flex gap-1.5 text-[8px] leading-3 text-slate-500"><span className="text-fteal">›</span>{item}</div>)}</div><div className="rounded-lg border border-[#0d2b45]/[.05] bg-[#ffffff]/70 p-2.5"><div className="mb-1.5 text-[7px] font-semibold uppercase tracking-wider text-slate-400">Çıktılar</div>{(event.outputs ?? []).map((item) => <div key={item} className="mt-1 flex gap-1.5 text-[8px] leading-3 text-slate-500"><span className="text-fgreen-light">✓</span>{item}</div>)}</div></div></motion.div>;
 }
 
 function DepartmentTask({ task, onOpen, onPrepare }: { task: DeptTask; onOpen: () => void; onPrepare: () => void }) {
@@ -160,7 +162,6 @@ export function TaskBoard({ tasks, campaigns, onAdvance, onUpdateTask, onUpdateC
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
   const [theater, setTheater] = useState<"live" | "replay" | null>(null);
   const [trace, setTrace] = useState<TraceEvent[]>([]);
-  const [selectedTraceId, setSelectedTraceId] = useState<string>();
   const traceRef = useRef<TraceEvent[]>([]);
   const active = campaigns.find((campaign) => campaign.id === selectedCampaignId) ?? campaigns[0];
 
@@ -171,7 +172,6 @@ export function TaskBoard({ tasks, campaigns, onAdvance, onUpdateTask, onUpdateC
   useEffect(() => {
     traceRef.current = active?.trace ?? [];
     setTrace(active?.trace ?? []);
-    setSelectedTraceId(active?.trace?.[active.trace.length - 1]?.id);
   }, [active?.id]);
 
   const processCampaign = async (campaign: CampaignJob) => {
@@ -203,7 +203,6 @@ export function TaskBoard({ tasks, campaigns, onAdvance, onUpdateTask, onUpdateC
             if (index >= 0) next[index] = data; else next.push(data);
             traceRef.current = next;
             setTrace(next);
-            setSelectedTraceId(data.id);
           } else if (event === "completed") result = data;
           else if (event === "failed") throw new Error(data.message ?? "process_failed");
         }
@@ -272,7 +271,6 @@ export function TaskBoard({ tasks, campaigns, onAdvance, onUpdateTask, onUpdateC
   };
 
   const departmentTasks = useMemo(() => Object.fromEntries(DEPARTMENTS.map((department) => [department, tasks.filter((task) => task.department === department)])), [tasks]);
-  const selectedTrace = trace.find((event) => event.id === selectedTraceId) ?? trace[trace.length - 1];
 
   return (
     <div className="mission-bg min-h-screen px-6 py-6 xl:px-8">
@@ -281,14 +279,14 @@ export function TaskBoard({ tasks, campaigns, onAdvance, onUpdateTask, onUpdateC
       <div className="grid gap-4 xl:grid-cols-[300px_1fr]">
         <CampaignQueue campaigns={campaigns} selectedId={active?.id} onSelect={setSelectedCampaignId} onNew={onNewCampaign} />
         <section className="rounded-[22px] border border-fteal/15 bg-[#ffffff]/85 p-5">
-          {!active ? <div className="grid min-h-[420px] place-items-center text-center"><div><BrainCircuit className="mx-auto mb-3 text-slate-400" size={30} /><div className="text-sm font-medium text-slate-700">İşlenecek kampanya bulunmuyor</div><button onClick={onNewCampaign} className="mt-4 rounded-xl bg-fteal/10 px-4 py-2 text-xs text-fteal-light">Kampanya oluştur</button></div></div> : <div className="space-y-4"><PipelineRibbon events={trace} /><div className="grid gap-5 lg:grid-cols-[.72fr_1.28fr]">
-            <div><div className="mb-4 flex items-start justify-between gap-4"><div><div className="flex items-center gap-2"><span className="font-mono text-[9px] uppercase tracking-wider" style={{ color: CAMPAIGN_STATE[active.status].color }}>{CAMPAIGN_STATE[active.status].label}</span>{typeof active.score === "number" && <span className="rounded-md border border-fgreen/20 bg-fgreen/[.05] px-1.5 py-0.5 font-mono text-[8px] text-fgreen-light">başarı skoru {active.score}/100</span>}</div><h2 className="mt-2 text-xl font-semibold leading-7 text-[#0d2b45]">{active.title}</h2><p className="mt-2 text-[10px] leading-5 text-slate-500">{active.brief.objective}</p></div></div><div className="mb-3 grid grid-cols-2 gap-2"><div className="rounded-xl border border-[#0d2b45]/[.055] bg-[#0d2b45]/[.02] p-2.5"><div className="text-[7px] uppercase tracking-wider text-slate-400">Hedef segment</div><div className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-600">{active.brief.segment}</div></div><div className="rounded-xl border border-[#0d2b45]/[.055] bg-[#0d2b45]/[.02] p-2.5"><div className="text-[7px] uppercase tracking-wider text-slate-400">Başarı ölçütü</div><div className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-600">{active.brief.kpi}</div></div></div><NeuralCore active={active.status === "processing"} />
+          {!active ? <div className="grid min-h-[420px] place-items-center text-center"><div><BrainCircuit className="mx-auto mb-3 text-slate-400" size={30} /><div className="text-sm font-medium text-slate-700">İşlenecek kampanya bulunmuyor</div><button onClick={onNewCampaign} className="mt-4 rounded-xl bg-fteal/10 px-4 py-2 text-xs text-fteal-light">Kampanya oluştur</button></div></div> : <div className="space-y-4"><PipelineRibbon events={trace} /><div className="grid gap-5 lg:grid-cols-2">
+            <div><div className="mb-4 flex items-start justify-between gap-4"><div><div className="flex items-center gap-2"><span className="font-mono text-[9px] uppercase tracking-wider" style={{ color: CAMPAIGN_STATE[active.status].color }}>{CAMPAIGN_STATE[active.status].label}</span>{typeof active.score === "number" && <span className="rounded-md border border-fgreen/20 bg-fgreen/[.05] px-1.5 py-0.5 font-mono text-[8px] text-fgreen-light">başarı skoru {active.score}/100</span>}</div><h2 className="mt-2 text-xl font-semibold leading-7 text-[#0d2b45]">{active.title}</h2><p className="mt-2 text-[10px] leading-5 text-slate-500">{active.brief.objective}</p></div></div><div className="mb-3 grid grid-cols-2 gap-2"><div className="rounded-xl border border-[#0d2b45]/[.055] bg-[#0d2b45]/[.02] p-2.5"><div className="text-[7px] uppercase tracking-wider text-slate-400">Hedef segment</div><div className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-600">{active.brief.segment}</div></div><div className="rounded-xl border border-[#0d2b45]/[.055] bg-[#0d2b45]/[.02] p-2.5"><div className="text-[7px] uppercase tracking-wider text-slate-400">Başarı ölçütü</div><div className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-600">{active.brief.kpi}</div></div></div>
               {active.status === "pending" && <button onClick={() => processCampaign(active)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fteal to-fgreen py-3 text-sm font-bold text-[#ffffff] shadow-glow-teal-sm"><Zap size={15} /> AI ile işle</button>}
               {active.status === "error" && <button onClick={() => processCampaign(active)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-coral/25 bg-coral/[.06] py-3 text-sm font-semibold text-coral"><RotateCcw size={14} /> Yeniden dene</button>}
               {active.status === "processing" && <button onClick={() => setTheater("live")} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-fteal/15 bg-fteal/[.045] py-3 text-xs text-fteal-light transition hover:bg-fteal/[.09]"><LoaderCircle size={14} className="animate-spin" /> Karar motoru çalışıyor — canlı izle</button>}
-              {active.status === "completed" && <div className="mt-4 rounded-xl border border-fgreen/15 bg-fgreen/[.045] p-3"><div className="flex items-center gap-2 text-[10px] font-semibold text-fgreen-light"><ShieldCheck size={12} /> 4 departmana dağıtıldı</div><p className="mt-1.5 text-[10px] leading-4 text-slate-500">{active.summary}</p><div className="mt-2 flex items-center justify-between"><span className="font-mono text-[8px] text-slate-400">{PROVIDER[active.provider ?? ""] ?? active.provider} · {active.model}</span>{active.trace.length > 0 && <button onClick={() => setTheater("replay")} className="flex items-center gap-1 rounded-md border border-fteal/25 bg-fteal/[.06] px-2 py-1 text-[9px] font-semibold text-fteal-light transition hover:bg-fteal/10"><Zap size={9} /> Analiz akışını izle</button>}</div></div>}
+              {active.status === "completed" && <div className="mt-4 rounded-xl border border-fgreen/15 bg-fgreen/[.045] p-3"><div className="flex items-center gap-2 text-[10px] font-semibold text-fgreen-light"><ShieldCheck size={12} /> 4 departmana dağıtıldı</div><p className="mt-1.5 text-[10px] leading-4 text-slate-500">{active.summary}</p><div className="mt-2 font-mono text-[8px] text-slate-400">{PROVIDER[active.provider ?? ""] ?? active.provider} · {active.model}</div></div>}
             </div>
-            <div className="grid gap-3 lg:grid-cols-[.9fr_1.1fr]"><div className="max-h-[430px] overflow-y-auto rounded-2xl border border-[#0d2b45]/[.06] bg-[#ffffff]/80 p-3"><div className="mb-3 flex items-center justify-between border-b border-[#0d2b45]/[.06] pb-3"><div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[.16em] text-slate-600"><BrainCircuit size={12} className="text-fteal" /> Canlı akış</div><span className="font-mono text-[7px] text-slate-400">SSE TRACE</span></div><Trace events={trace} processing={active.status === "processing"} selectedId={selectedTraceId} onSelect={setSelectedTraceId} /></div><div><div className="flex items-center gap-2 px-1 text-[8px] font-semibold uppercase tracking-[.16em] text-slate-500"><Fingerprint size={10} /> Açıklanabilir karar detayı</div><AlgorithmInspector event={selectedTrace} /></div></div>
+            <AnalysisSummary trace={trace} processing={active.status === "processing"} onOpenTheater={() => setTheater(active.status === "processing" ? "live" : "replay")} />
           </div></div>}
         </section>
       </div>
