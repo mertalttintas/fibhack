@@ -20,18 +20,23 @@ export function Sidebar({
   boardBadge: number;
 }) {
   return (
-    <aside className="fixed left-0 top-0 h-full w-60 border-r border-[#0d2b45]/[0.07] bg-white/90 backdrop-blur-xl flex flex-col z-40">
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-[#0d2b45]/[0.07]">
-        <DiamondLogo size={30} />
+    <aside
+      className="fixed left-0 top-0 z-40 flex h-full w-60 flex-col text-white shadow-[4px_0_24px_rgba(13,43,69,0.12)]"
+      style={{ background: "linear-gradient(165deg, #0058A3 0%, #0069B4 34%, #2E9C64 72%, #7AB929 100%)" }}
+    >
+      <div className="flex h-16 items-center gap-3 border-b border-white/15 px-5">
+        <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/95 shadow-sm">
+          <DiamondLogo size={26} />
+        </div>
         <div className="leading-tight">
-          <div className="text-sm font-bold text-[#0d2b45] tracking-tight">deneme</div>
-          <div className="text-[10px] text-fteal font-medium tracking-widest uppercase">
+          <div className="text-sm font-bold tracking-tight text-white">deneme</div>
+          <div className="text-[10px] font-medium uppercase tracking-widest text-white/70">
             AI Orchestrator
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 space-y-1.5 px-3 py-4">
         {items.map(({ key, label, icon: Icon }) => {
           const active = page === key;
           return (
@@ -39,16 +44,21 @@ export function Sidebar({
               key={key}
               onClick={() => onNavigate(key)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 relative",
+                "relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300",
                 active
-                  ? "bg-fteal/10 text-fteal-light shadow-glow-teal-sm border border-fteal/30"
-                  : "text-slate-600 hover:text-slate-800 hover:bg-[#0d2b45]/[0.04] border border-transparent"
+                  ? "bg-white text-[#0069B4] shadow-[0_4px_14px_rgba(13,43,69,0.18)] font-semibold"
+                  : "text-white/80 hover:bg-white/[0.12] hover:text-white"
               )}
             >
-              <Icon size={17} className={active ? "drop-shadow-[0_0_6px_rgba(0,105,180,0.8)]" : ""} />
+              <Icon size={17} />
               {label}
               {key === "board" && boardBadge > 0 && (
-                <span className="ml-auto text-[10px] font-bold bg-coral/20 text-coral border border-coral/30 rounded-full px-1.5 py-0.5">
+                <span
+                  className={cn(
+                    "ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                    active ? "bg-[#0069B4]/10 text-[#0069B4]" : "border border-white/40 bg-white/20 text-white"
+                  )}
+                >
                   {boardBadge}
                 </span>
               )}
@@ -57,15 +67,15 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="px-5 py-4 border-t border-[#0d2b45]/[0.07]">
-        <div className="glass px-3 py-2.5 flex items-center gap-2.5">
+      <div className="border-t border-white/15 px-5 py-4">
+        <div className="flex items-center gap-2.5 rounded-2xl border border-white/20 bg-white/10 px-3 py-2.5 backdrop-blur-sm">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-fgreen opacity-60" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-fgreen" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
           </span>
           <div className="text-[11px] leading-tight">
-            <div className="text-slate-700 font-medium">Orchestrator aktif</div>
-            <div className="text-slate-500">v2.4.1 · uptime 214 gün</div>
+            <div className="font-medium text-white">Orchestrator aktif</div>
+            <div className="text-white/65">v2.4.1 · uptime 214 gün</div>
           </div>
         </div>
       </div>
