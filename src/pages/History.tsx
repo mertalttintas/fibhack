@@ -19,6 +19,14 @@ const RESULT_TONE: Record<string, "green" | "amber" | "coral"> = {
 
 const FILTERS = ["Tümü", "Başarılı", "Kısmi", "Düşük"] as const;
 
+// Sonuç sınıflandırması: kampanya kapanışında ana KPI'ların hedef gerçekleşme
+// oranına göre otomatik atanır.
+const RESULT_CRITERIA: Record<string, string> = {
+  Başarılı: "Ana KPI hedeflerinin tamamı karşılandı — hedef gerçekleşme ≥ %100.",
+  Kısmi: "Hedeflerin %70-100'ü gerçekleşti — kampanya değer üretti ama hedefin altında kaldı.",
+  Düşük: "Hedef gerçekleşme %70'in altında veya kritik bir KPI ıskalandı.",
+};
+
 function CampaignRow({ campaign, expanded, onToggle }: { campaign: PastCampaign; expanded: boolean; onToggle: () => void }) {
   const d = campaign.details;
   return (
@@ -26,7 +34,7 @@ function CampaignRow({ campaign, expanded, onToggle }: { campaign: PastCampaign;
       <button onClick={onToggle} className="flex w-full items-center gap-5 p-4 text-left">
         <div className="w-28 shrink-0">
           <div className="font-mono text-[11px] text-slate-500">{campaign.date}</div>
-          <span className={cn("mt-1 inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold", RESULT_STYLE[campaign.result])}>{campaign.result}</span>
+          <span title={RESULT_CRITERIA[campaign.result]} className={cn("mt-1 inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold", RESULT_STYLE[campaign.result])}>{campaign.result}</span>
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold text-white">{campaign.name}</div>
@@ -137,6 +145,15 @@ export function HistoryPage() {
           <span className="font-semibold text-fteal-light">Açılma</span> — kampanya mesajı gönderilen müşterilerin mesajı açma/tıklama oranı; kanalın dikkat çekme gücünü ölçer (örn. 100.000 push gitti, 38.000'i açıldı → %38).{" "}
           <span className="font-semibold text-fgreen-light">Dönüşüm</span> — ulaşılan müşteriler içinden kampanyanın hedeflediği aksiyonu (başvuru, satın alma, maaş taşıma…) tamamlayanların oranı; kampanyanın gerçek iş sonucunu ölçer. Açılma yüksek ama dönüşüm düşükse mesaj ilgi çekiyor fakat teklif ikna etmiyor demektir.
         </span>
+      </div>
+
+      <div className="mb-5 grid gap-2 md:grid-cols-3">
+        {(["Başarılı", "Kısmi", "Düşük"] as const).map((result, index) => (
+          <motion.div key={result} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }} className="flex items-start gap-2.5 rounded-xl border border-white/[.06] bg-white/[.015] px-3 py-2.5">
+            <span className={cn("mt-0.5 inline-block shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold", RESULT_STYLE[result])}>{result}</span>
+            <span className="text-[10px] leading-4 text-slate-400">{RESULT_CRITERIA[result]}</span>
+          </motion.div>
+        ))}
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
