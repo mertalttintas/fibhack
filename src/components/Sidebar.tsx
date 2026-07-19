@@ -69,10 +69,13 @@ export function Sidebar({
 
       <div className="border-t border-white/15 px-5 py-4">
         <div className="flex items-center gap-2.5 rounded-2xl border border-white/20 bg-white/10 px-3 py-2.5 backdrop-blur-sm">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-          </span>
+          <div className="relative shrink-0">
+            <img src="/rabbit-face.png" alt="Fiba maskot" className="h-9 w-9 rounded-xl border border-white/40 object-cover" />
+            <span className="absolute -right-0.5 -top-0.5 flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+            </span>
+          </div>
           <div className="text-[11px] leading-tight">
             <div className="font-medium text-white">Orchestrator aktif</div>
             <div className="text-white/65">v2.4.1 · uptime 214 gün</div>
