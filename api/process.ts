@@ -25,6 +25,8 @@ const SEARCHES = [
   { term: "taşıt kredisi", count: 1150, change: 7, tags: ["taşıt", "araç", "kredi"] },
   { term: "kredi kartı limit artırma", count: 1080, change: 11, tags: ["kart", "limit", "kredi"] },
   { term: "evlilik kredisi", count: 940, change: 19, tags: ["evlilik", "çift", "kredi", "konut", "eşya"] },
+  { term: "mevduat hesaplama", count: 990, change: -9, tags: ["mevduat", "faiz", "birikim", "vadeli"] },
+  { term: "şube randevu", count: 860, change: -14, tags: ["şube", "randevu"] },
 ];
 
 const TABS = [
@@ -36,7 +38,10 @@ const TABS = [
   { name: "Yatırım", usage: 38, change: 4, tags: ["yatırım", "fon", "mevduat", "vadeli"] },
   { name: "Kampanyalar", usage: 33, change: 15, tags: ["kampanya", "puan", "fırsat", "promosyon"] },
   { name: "Başvurular", usage: 29, change: 8, tags: ["başvuru", "kredi", "kart", "hesap", "öğrenci"] },
+  { name: "Şube Randevu", usage: 18, change: -14, tags: ["şube", "randevu"] },
 ];
+
+const pct = (change: number) => `${change >= 0 ? "+" : "−"}%${Math.abs(change)}`;
 
 function signalAnalysis(idea: string) {
   const lower = idea.toLocaleLowerCase("tr-TR");
@@ -48,7 +53,7 @@ function signalAnalysis(idea: string) {
   const avgChange = matchedSearches.length
     ? matchedSearches.reduce((sum, s) => sum + s.change, 0) / matchedSearches.length : 0;
   const tabBoost = matchedTabs.length ? matchedTabs.reduce((sum, t) => sum + t.change, 0) / matchedTabs.length : 0;
-  const momentum = Math.min(98, Math.round(38 + avgChange * 1.4 + tabBoost * 0.8 + Math.min(20, volume / 500)));
+  const momentum = Math.max(15, Math.min(98, Math.round(38 + avgChange * 1.4 + tabBoost * 0.8 + Math.min(20, volume / 500))));
   return { matchedSearches, matchedTabs, volume, momentum };
 }
 
@@ -158,6 +163,7 @@ KURUMSAL HAFIZA:
 CANLI TALEP SİNYALLERİ (mobil bankacılık, son 30 gün):
 - Aramalar: kira öderken puan 4.210 (+%31) · öğrenci hesabı 3.860 (+%31) · konut kredisi faiz 3.120 (+%34) · döviz alarmı 2.540 (+%21) · borç yapılandırma 1.980 (+%18) · pos komisyon 1.490 (+%16) · evlilik kredisi 940 (+%19).
 - Ekran kullanımı: Kredi Hesaplama +%12, Kampanyalar sekmesi +%15, Döviz & Altın +%9, Başvurular +%8.
+- DÜŞEN sinyaller: şube randevu −%14 · mevduat hesaplama ekranı −%9 · 18-30 segmentte SMS okunma −%17 · e-posta tıklama −%12. Zayıflayan kanal/akışlara yaslanma; şube ziyareti gerektiren kurgulardan kaçın, genç segmentte SMS önerme.
 
 KARAR YÖNTEMİ:
 1. Benzer kampanyaları anlamsal olarak eşleştir.
@@ -275,24 +281,24 @@ export default async function handler(req: any, res: any) {
     const signals = signalAnalysis(idea);
     const topSignal = signals.matchedSearches[0];
     stage("signals", "Talep sinyalleri tarandı", topSignal
-      ? `${signals.matchedSearches.length} arama + ${signals.matchedTabs.length} ekran eşleşti · en güçlü: "${topSignal.term}" +%${topSignal.change}`
+      ? `${signals.matchedSearches.length} arama + ${signals.matchedTabs.length} ekran eşleşti · en güçlü: "${topSignal.term}" ${pct(topSignal.change)}`
       : "Doğrudan sinyal eşleşmesi yok · genel talep taban çizgisi kullanılacak", "done", {
       algorithm: "Momentum sinyal eşleştirici",
-      why: "Kampanya kararını varsayıma değil, müşterilerin uygulamada bugün fiilen ne aradığına dayandırmak istiyoruz. Bu eşleştirici arama hacmini ve 30 günlük artış hızını birlikte tartar; böylece hacmi küçük ama hızla büyüyen talep de gözden kaçmaz — tek başına hacme bakmak dünkü talebi, tek başına artışa bakmak gürültüyü ölçerdi.",
+      why: "Kampanya kararını varsayıma değil, müşterilerin uygulamada bugün fiilen ne aradığına dayandırmak istiyoruz. Bu eşleştirici arama hacmini ve 30 günlük artış hızını birlikte tartar; düşen sinyaller de hesaba katılır — zayıflayan bir kanala ya da ilgisi azalan bir ürüne yaslanan kampanya, momentum skorunda otomatik cezalandırılır.",
       method: [
-        "Brief terimleri 12 arama teriminin etiket kümeleriyle eşleştirildi",
-        "Eşleşen aramaların aylık hacmi ve 30 günlük değişim yüzdesi toplandı",
-        "İlgili ekran/sekme kullanım artışları destekleyici sinyal olarak eklendi",
+        "Brief terimleri 14 arama teriminin etiket kümeleriyle eşleştirildi",
+        "Eşleşen aramaların aylık hacmi ve 30 günlük değişim yüzdesi toplandı (düşüşler negatif katkı yapar)",
+        "İlgili ekran/sekme kullanım değişimleri destekleyici sinyal olarak eklendi",
         "Hacim + ivme ağırlıklandırılarak 0-100 arası momentum skoru üretildi",
       ],
       inputs: [
-        "Mobil arama günlüğü: 12 terim, 24.6K aylık sorgu (son 30 gün)",
-        "8 ekran kullanım metriği (Kredi Hesaplama, Kampanyalar, Başvurular…)",
-        "Terim bazlı değişim oranları (+%7 ile +%34 aralığında)",
+        "Mobil arama günlüğü: 14 terim, 26.5K aylık sorgu (son 30 gün)",
+        "9 ekran kullanım metriği (Kredi Hesaplama, Kampanyalar, Şube Randevu…)",
+        "Terim bazlı değişim oranları (−%17 ile +%34 aralığında)",
       ],
       outputs: [
-        ...signals.matchedSearches.map((s) => `Eşleşen arama: "${s.term}" — ${s.count.toLocaleString("tr-TR")} sorgu/ay, son 30 günde +%${s.change}`),
-        ...signals.matchedTabs.map((t) => `Eşleşen ekran: ${t.name} sekmesi kullanımı +%${t.change}`),
+        ...signals.matchedSearches.map((s) => `Eşleşen arama: "${s.term}" — ${s.count.toLocaleString("tr-TR")} sorgu/ay, son 30 günde ${pct(s.change)}`),
+        ...signals.matchedTabs.map((t) => `Eşleşen ekran: ${t.name} sekmesi kullanımı ${pct(t.change)}`),
       ].slice(0, 6),
       score: signals.momentum,
       meaning: signals.momentum >= 75
