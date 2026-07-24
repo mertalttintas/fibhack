@@ -14,34 +14,32 @@ export function DiamondLogo({ size = 36, className }: { size?: number; className
           }}
         />
       </div>
-      <svg viewBox="0 0 48 48" width={size} height={size} className="relative">
+      {/* Fibabanka elması: sol yüzler mavi, sağ yüzler yeşil, dört facetli */}
+      <svg viewBox="0 0 48 48" width={size} height={size} className="relative drop-shadow-[0_0_8px_rgba(0,105,180,0.45)]">
         <defs>
-          <linearGradient id="dg" x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id="fibaBlueTop" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#0A79C4" />
+            <stop offset="100%" stopColor="#0069B4" />
+          </linearGradient>
+          <linearGradient id="fibaBlueBottom" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="#0069B4" />
-            <stop offset="55%" stopColor="#2E9ED6" />
-            <stop offset="100%" stopColor="#8DC63F" />
+            <stop offset="100%" stopColor="#004E86" />
+          </linearGradient>
+          <linearGradient id="fibaGreenTop" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#A6D651" />
+            <stop offset="100%" stopColor="#7AB929" />
+          </linearGradient>
+          <linearGradient id="fibaGreenBottom" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#7AB929" />
+            <stop offset="100%" stopColor="#568D12" />
           </linearGradient>
         </defs>
-        <rect
-          x="12"
-          y="12"
-          width="24"
-          height="24"
-          rx="4"
-          transform="rotate(45 24 24)"
-          fill="url(#dg)"
-          className="drop-shadow-[0_0_8px_rgba(0,105,180,0.6)]"
-        />
-        <rect
-          x="18"
-          y="18"
-          width="12"
-          height="12"
-          rx="2"
-          transform="rotate(45 24 24)"
-          fill="#ffffff"
-          opacity="0.85"
-        />
+        <polygon points="4,24 24,4 24,24" fill="url(#fibaBlueTop)" />
+        <polygon points="4,24 24,24 24,44" fill="url(#fibaBlueBottom)" />
+        <polygon points="24,4 44,24 24,24" fill="url(#fibaGreenTop)" />
+        <polygon points="24,24 44,24 24,44" fill="url(#fibaGreenBottom)" />
+        {/* Facet ayrım çizgileri — kesim hissi */}
+        <path d="M24 4 L24 44 M4 24 L44 24" stroke="#ffffff" strokeOpacity="0.35" strokeWidth="0.8" />
       </svg>
     </div>
   );

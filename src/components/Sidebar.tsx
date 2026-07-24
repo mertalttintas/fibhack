@@ -29,7 +29,7 @@ export function Sidebar({
           <DiamondLogo size={26} />
         </div>
         <div className="leading-tight">
-          <div className="text-sm font-bold tracking-tight text-white">deneme</div>
+          <div className="text-sm font-bold tracking-tight text-white">Fibabanka</div>
           <div className="text-[10px] font-medium uppercase tracking-widest text-white/70">
             AI Orchestrator
           </div>

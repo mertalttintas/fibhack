@@ -115,7 +115,7 @@ const SCHEMA = {
           details: {
             type: "object",
             additionalProperties: false,
-            required: ["kpis", "subtasks", "timeline", "dataSources", "risk"],
+            required: ["kpis", "subtasks", "timeline", "dataSources", "dependencies", "risk"],
             properties: {
               kpis: {
                 type: "array",
@@ -131,17 +131,31 @@ const SCHEMA = {
                 items: {
                   type: "object",
                   additionalProperties: false,
-                  required: ["name", "owner", "eta", "status"],
+                  required: ["name", "owner", "eta", "status", "expectation"],
                   properties: {
                     name: { type: "string" },
                     owner: { type: "string" },
                     eta: { type: "string" },
                     status: { type: "string", enum: ["planlandı", "sürüyor", "hazır"] },
+                    expectation: { type: "string" },
                   },
                 },
               },
               timeline: { type: "string" },
               dataSources: { type: "array", items: { type: "string" } },
+              dependencies: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["department", "need", "message"],
+                  properties: {
+                    department: { type: "string", enum: DEPARTMENTS },
+                    need: { type: "string" },
+                    message: { type: "string" },
+                  },
+                },
+              },
               risk: { type: "string" },
             },
           },
@@ -170,7 +184,9 @@ KARAR YÖNTEMİ:
 2. Segment ve kanal performansını geçmiş metriklerle karşılaştır.
 3. BDDK/KVKK ve operasyonel darboğaz kurallarını uygula.
 4. Her departmana ölçülebilir KPI, 3-4 alt görev, sahip, ETA, veri kaynağı ve risk üret.
-5. Uydurma kesinlik kullanma. Varsayımları rationale içinde açıkça belirt.
+5. Her alt görev için "expectation" alanına AI'nın ekipten tam olarak ne istediğini yaz: hangi geliştirme/çıktı bekleniyor, kabul kriteri ne, hangi formatta teslim edilecek. Genel laf değil, uygulanabilir talimat olsun (örn. "18-30 yaş, aktif mobil, izinli iletişim filtresiyle segment listesi CSV olarak; churn skoru >0.6 hariç").
+6. Görev başka bir departmandan veri, geliştirme veya onay gerektiriyorsa "dependencies" dizisine yaz: department = ihtiyacın karşılanacağı departman (kartın kendi departmanı olamaz), need = kısa ihtiyaç tanımı, message = o departmanın kanalına Team-bot ile gönderilmeye hazır, kibar ve net talep mesajı (kim istiyor, ne istiyor, neden, ne zamana kadar). Bağımlılık yoksa boş dizi döndür.
+7. Uydurma kesinlik kullanma. Varsayımları rationale içinde açıkça belirt.
 
 Çıktı Türkçe olmalı. rationale, kullanıcıya gösterilebilir kısa karar açıklamasıdır; gizli düşünce zinciri değildir.`;
 
@@ -187,14 +203,16 @@ function tokens(value: string) {
   return new Set(value.toLocaleLowerCase("tr-TR").replace(/[^a-zçğıöşü0-9\s]/g, " ").split(/\s+/).filter((token) => token.length > 2));
 }
 
-function similarityAnalysis(idea: string) {
+// extra: çalışanların "Sonuçları gir" ile kaydettiği kampanya sonuçları —
+// öğrenen hafıza; statik çekirdek arşivle aynı havuzda skorlanır.
+function similarityAnalysis(idea: string, extra: any[] = []) {
   const ideaTokens = tokens(idea);
-  return MEMORY.map((campaign) => {
+  return [...MEMORY, ...extra].map((campaign) => {
     const recordTokens = new Set([...tokens(campaign.name), ...campaign.tags]);
     const overlap = [...ideaTokens].filter((token) => recordTokens.has(token)).length;
     const union = new Set([...ideaTokens, ...recordTokens]).size || 1;
-    const keywordHits = campaign.tags.filter((tag) => idea.toLocaleLowerCase("tr-TR").includes(tag)).length;
-    const score = Math.round(((keywordHits / campaign.tags.length) * 0.72 + (overlap / union) * 0.28) * 100);
+    const keywordHits = campaign.tags.filter((tag: string) => idea.toLocaleLowerCase("tr-TR").includes(tag)).length;
+    const score = Math.round(((keywordHits / (campaign.tags.length || 1)) * 0.72 + (overlap / union) * 0.28) * 100);
     return { ...campaign, score };
   }).sort((a, b) => b.score - a.score).slice(0, 3);
 }
@@ -233,6 +251,19 @@ export default async function handler(req: any, res: any) {
   if (req.method !== "POST") return res.status(405).json({ error: "method_not_allowed" });
   const idea = req.body?.idea;
   if (!idea || typeof idea !== "string" || idea.length > 2000) return res.status(400).json({ error: "invalid_idea" });
+
+  // Öğrenen hafıza: frontend'in gönderdiği çalışan girişli kampanya sonuçları
+  const learned = (Array.isArray(req.body?.memory) ? req.body.memory.slice(0, 10) : [])
+    .filter((m: any) => m && typeof m.name === "string" && m.name.length > 0 && m.name.length <= 120)
+    .map((m: any) => ({
+      name: m.name,
+      tags: [...tokens(`${m.name} ${typeof m.lesson === "string" ? m.lesson : ""}`)],
+      channel: typeof m.channel === "string" ? m.channel.slice(0, 40) : "—",
+      openRate: Number.isFinite(+m.openRate) ? Math.max(0, Math.min(100, +m.openRate)) : 0,
+      conversion: Number.isFinite(+m.conversion) ? Math.max(0, Math.min(100, +m.conversion)) : 0,
+      lesson: typeof m.lesson === "string" ? m.lesson.slice(0, 300) : "",
+      learned: true,
+    }));
   if (!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.GEMINI_API_KEY) return res.status(503).json({ error: "no_api_key" });
 
   res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
@@ -309,7 +340,7 @@ export default async function handler(req: any, res: any) {
     });
     await wait(380);
 
-    const matches = similarityAnalysis(idea);
+    const matches = similarityAnalysis(idea, learned);
     const topMatch = matches[0];
     stage("memory", "Benzer kampanyalar sıralandı", matches.map((item) => `${item.name} %${item.score}`).join(" · "), "done", {
       algorithm: "Weighted Jaccard Retrieval",
@@ -321,10 +352,11 @@ export default async function handler(req: any, res: any) {
       ],
       inputs: [
         `Kurumsal hafıza: 40 kampanyalık arşiv · ${MEMORY.length} etiketli çekirdek örnek (kanal, açılma, dönüşüm metrikleriyle)`,
+        ...(learned.length ? [`Öğrenen hafıza: ${learned.length} çalışan girişli sonuç kaydı — bu panoda tamamlanan kampanyalardan`] : []),
         "Ürün ve segment etiket kümeleri",
         "Brief'ten üretilen kelime kümesi",
       ],
-      outputs: matches.map((item) => `${item.name}: %${item.score} benzerlik — ${item.channel} kanalında %${item.openRate} açılma, %${item.conversion} dönüşüm`),
+      outputs: matches.map((item: any) => `${item.name}: %${item.score} benzerlik — ${item.channel} kanalında %${item.openRate} açılma, %${item.conversion} dönüşüm${item.learned ? " · çalışan girişli sonuç" : ""}`),
       score: topMatch?.score ?? 0,
       meaning: (topMatch?.score ?? 0) >= 60
         ? `En yakın örnek "${topMatch.name}" (%${topMatch.score}): bu kampanyanın ölçülmüş sonuçları yeni karar için güvenilir referans.`
@@ -415,6 +447,7 @@ export default async function handler(req: any, res: any) {
         matchedTabs: signals.matchedTabs.map((t) => ({ tab: t.name, changePct: t.change })),
       },
       similarCampaigns: matches,
+      learnedOutcomes: learned.map(({ name, channel, openRate, conversion, lesson }: any) => ({ name, channel, openRate, conversion, lesson })),
       channelScores: channels.slice(0, 3),
       timingWindow: { window: timing.window, factors: timing.factors, score: timing.score },
       complianceRules: findings,

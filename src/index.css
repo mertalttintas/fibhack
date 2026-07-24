@@ -28,13 +28,13 @@
 
 @layer components {
   .glass {
-    @apply bg-white border border-[#0d2b45]/10 rounded-2xl shadow-[0_2px_14px_rgba(13,43,69,0.05)];
+    @apply bg-white border border-[#0d2b45]/25 rounded-2xl shadow-[0_2px_14px_rgba(13,43,69,0.05)];
   }
   .glass-hover {
     @apply transition-all duration-300 hover:border-fteal/40 hover:shadow-glow-teal-sm;
   }
   .chip {
-    @apply px-3 py-1.5 rounded-full text-xs font-medium border border-[#0d2b45]/10 bg-[#0d2b45]/[0.03] text-slate-600 hover:border-fteal/50 hover:text-fteal transition-colors cursor-pointer;
+    @apply px-3 py-1.5 rounded-full text-xs font-medium border border-[#0d2b45]/25 bg-[#0d2b45]/[0.03] text-slate-600 hover:border-fteal/50 hover:text-fteal transition-colors cursor-pointer;
   }
 }
 
@@ -140,19 +140,6 @@
   background: linear-gradient(90deg, transparent, rgba(0, 105, 180, 0.5), transparent);
   animation: scanline 4s linear infinite;
   pointer-events: none;
-}
-
-/* Diamond watermark pattern */
-.diamond-watermark {
-  position: relative;
-}
-.diamond-watermark::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect x='45' y='45' width='30' height='30' rx='4' transform='rotate(45 60 60)' fill='none' stroke='%230069B4' stroke-opacity='0.05' stroke-width='1.5'/%3E%3C/svg%3E");
-  background-size: 120px 120px;
 }
 
 @media (prefers-reduced-motion: reduce) {

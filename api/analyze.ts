@@ -78,7 +78,7 @@ const SCHEMA = {
   },
 } as const;
 
-const SYSTEM = `Sen deneme'nin "AI Business Orchestrator" sistemisin — departmanlar arası kampanya karar otomasyonu yapan, aylardır canlı çalışan olgun bir kurumsal sistem.
+const SYSTEM = `Sen Fibabanka'nın "AI Business Orchestrator" sistemisin — departmanlar arası kampanya karar otomasyonu yapan, aylardır canlı çalışan olgun bir kurumsal sistem.
 
 Kullanıcı bir kampanya fikri yazar. Sen bu fikri analiz edip TAM 4 departmana (CRM, Veri Platformları, Legal, Pazarlama) somut, gerekçeli görev kartları üretirsin. Çıktın Türkçe olmalı.
 

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, Check, ChevronDown, Info, Landmark, Lightbulb, Target, Users, X } from "lucide-react";
 import { Sparkline } from "../components/Sparkline";
-import { pastCampaigns, type PastCampaign } from "../data/mock";
+import { loadLivePastCampaigns, pastCampaigns, type PastCampaign } from "../data/mock";
 import { cn } from "../lib/utils";
 
 const RESULT_STYLE: Record<string, string> = {
@@ -35,6 +35,7 @@ function CampaignRow({ campaign, expanded, onToggle }: { campaign: PastCampaign;
         <div className="w-28 shrink-0">
           <div className="font-mono text-[11px] text-slate-500">{campaign.date}</div>
           <span title={RESULT_CRITERIA[campaign.result]} className={cn("mt-1 inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold", RESULT_STYLE[campaign.result])}>{campaign.result}</span>
+          {campaign.live && <span className="mt-1 block w-fit rounded-full border border-fteal/30 bg-fteal/[.08] px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-fteal-light">Yeni · AI orkestrasyonu</span>}
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold text-[#0d2b45]">{campaign.name}</div>
@@ -60,9 +61,9 @@ function CampaignRow({ campaign, expanded, onToggle }: { campaign: PastCampaign;
       <AnimatePresence initial={false}>
         {expanded && d && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
-            <div className="border-t border-[#0d2b45]/[.06] p-4">
+            <div className="border-t border-[#0d2b45]/[.3] p-4">
               <div className="grid gap-3 lg:grid-cols-3">
-                <div className="rounded-xl border border-[#0d2b45]/[.06] bg-[#0d2b45]/[.015] p-3.5">
+                <div className="rounded-xl border border-[#0d2b45]/[.3] bg-[#0d2b45]/[.015] p-3.5">
                   <div className="mb-2.5 flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-500"><Target size={11} className="text-fteal" /> Kampanya künyesi</div>
                   <div className="space-y-2.5 text-[11px] leading-4">
                     <div><span className="text-slate-500">Amaç · </span><span className="text-slate-700">{d.objective}</span></div>
@@ -70,14 +71,14 @@ function CampaignRow({ campaign, expanded, onToggle }: { campaign: PastCampaign;
                     <div><span className="text-slate-500">Süre · </span><span className="text-slate-700">{d.duration}</span></div>
                     <div><span className="text-slate-500">Erişim · </span><span className="text-slate-700">{d.reach}</span></div>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5">{d.departments.map((dep) => <span key={dep} className="rounded-full border border-[#0d2b45]/[.08] bg-[#0d2b45]/[.025] px-2 py-0.5 text-[9px] text-slate-600">{dep}</span>)}</div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">{d.departments.map((dep) => <span key={dep} className="rounded-full border border-[#0d2b45]/[.3] bg-[#0d2b45]/[.025] px-2 py-0.5 text-[9px] text-slate-600">{dep}</span>)}</div>
                 </div>
 
-                <div className="rounded-xl border border-[#0d2b45]/[.06] bg-[#0d2b45]/[.015] p-3.5">
+                <div className="rounded-xl border border-[#0d2b45]/[.3] bg-[#0d2b45]/[.015] p-3.5">
                   <div className="mb-2.5 flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-500"><Landmark size={11} className="text-fteal" /> KPI: hedef vs gerçekleşen</div>
                   <div className="space-y-2">
                     {d.kpis.map((kpi) => (
-                      <div key={kpi.label} className="flex items-center justify-between gap-3 rounded-lg border border-[#0d2b45]/[.05] bg-[#ffffff]/60 px-2.5 py-2">
+                      <div key={kpi.label} className="flex items-center justify-between gap-3 rounded-lg border border-[#0d2b45]/[.3] bg-[#ffffff]/60 px-2.5 py-2">
                         <span className="text-[10px] text-slate-600">{kpi.label}</span>
                         <span className="flex items-center gap-2 font-mono text-[10px]">
                           <span className="text-slate-500">{kpi.target}</span>
@@ -90,7 +91,7 @@ function CampaignRow({ campaign, expanded, onToggle }: { campaign: PastCampaign;
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-[#0d2b45]/[.06] bg-[#0d2b45]/[.015] p-3.5">
+                <div className="rounded-xl border border-[#0d2b45]/[.3] bg-[#0d2b45]/[.015] p-3.5">
                   <div className="mb-2.5 flex items-center gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-500"><Users size={11} className="text-fteal" /> Haftalık dönüşüm eğrisi</div>
                   <Sparkline data={d.spark} tone={RESULT_TONE[campaign.result]} width={260} height={54} />
                   <div className="mt-1.5 flex justify-between font-mono text-[8px] text-slate-500"><span>1. hafta</span><span>son hafta · %{d.spark[d.spark.length - 1]}</span></div>
@@ -117,12 +118,14 @@ function CampaignRow({ campaign, expanded, onToggle }: { campaign: PastCampaign;
 export function HistoryPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Tümü");
+  // Bu oturumda tamamlanıp sonuçları girilen kampanyalar arşivin en üstünde gösterilir
+  const [archive] = useState<PastCampaign[]>(() => [...loadLivePastCampaigns(), ...pastCampaigns]);
 
-  const list = filter === "Tümü" ? pastCampaigns : pastCampaigns.filter((c) => c.result === filter);
-  const avgOpen = (pastCampaigns.reduce((sum, c) => sum + c.openRate, 0) / pastCampaigns.length).toFixed(1);
-  const avgConversion = (pastCampaigns.reduce((sum, c) => sum + c.conversion, 0) / pastCampaigns.length).toFixed(1);
-  const successCount = pastCampaigns.filter((c) => c.result === "Başarılı").length;
-  const learningCount = pastCampaigns.reduce((sum, c) => sum + (c.details?.learnings.length ?? 0), 0);
+  const list = filter === "Tümü" ? archive : archive.filter((c) => c.result === filter);
+  const avgOpen = (archive.reduce((sum, c) => sum + c.openRate, 0) / archive.length).toFixed(1);
+  const avgConversion = (archive.reduce((sum, c) => sum + c.conversion, 0) / archive.length).toFixed(1);
+  const successCount = archive.filter((c) => c.result === "Başarılı").length;
+  const learningCount = archive.reduce((sum, c) => sum + (c.details?.learnings.length ?? 0), 0);
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-6">
@@ -133,8 +136,8 @@ export function HistoryPage() {
         </div>
         <div className="flex items-center gap-1.5">
           {FILTERS.map((item) => {
-            const count = item === "Tümü" ? pastCampaigns.length : pastCampaigns.filter((c) => c.result === item).length;
-            return <button key={item} onClick={() => setFilter(item)} className={cn("rounded-full border px-2.5 py-1 text-[10px] transition", filter === item ? "border-fteal/30 bg-fteal/[.08] text-fteal-light" : "border-[#0d2b45]/[.07] text-slate-500 hover:border-[#0d2b45]/[.14] hover:text-slate-700")}>{item} <span className="font-mono text-[9px] opacity-70">{count}</span></button>;
+            const count = item === "Tümü" ? archive.length : archive.filter((c) => c.result === item).length;
+            return <button key={item} onClick={() => setFilter(item)} className={cn("rounded-full border px-2.5 py-1 text-[10px] transition", filter === item ? "border-fteal/30 bg-fteal/[.08] text-fteal-light" : "border-[#0d2b45]/[.3] text-slate-500 hover:border-[#0d2b45]/[.3] hover:text-slate-700")}>{item} <span className="font-mono text-[9px] opacity-70">{count}</span></button>;
           })}
         </div>
       </div>
@@ -149,7 +152,7 @@ export function HistoryPage() {
 
       <div className="mb-5 grid gap-2 md:grid-cols-3">
         {(["Başarılı", "Kısmi", "Düşük"] as const).map((result, index) => (
-          <motion.div key={result} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }} className="flex items-start gap-2.5 rounded-xl border border-[#0d2b45]/[.06] bg-[#0d2b45]/[.015] px-3 py-2.5">
+          <motion.div key={result} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }} className="flex items-start gap-2.5 rounded-xl border border-[#0d2b45]/[.3] bg-[#0d2b45]/[.015] px-3 py-2.5">
             <span className={cn("mt-0.5 inline-block shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold", RESULT_STYLE[result])}>{result}</span>
             <span className="text-[10px] leading-4 text-slate-600">{RESULT_CRITERIA[result]}</span>
           </motion.div>
@@ -158,7 +161,7 @@ export function HistoryPage() {
 
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
-          { label: "Arşivdeki kampanya", value: String(pastCampaigns.length) },
+          { label: "Arşivdeki kampanya", value: String(archive.length) },
           { label: "Ortalama açılma", value: `%${avgOpen}` },
           { label: "Ortalama dönüşüm", value: `%${avgConversion}` },
           { label: "Hafızaya işlenen ders", value: String(learningCount) },
@@ -178,7 +181,7 @@ export function HistoryPage() {
       </div>
 
       <div className="mt-6 text-center text-xs text-slate-500">
-        {pastCampaigns.length} kampanya arşivde · {successCount} başarılı · Satıra tıklayarak detayları açabilirsiniz
+        {archive.length} kampanya arşivde · {successCount} başarılı · Satıra tıklayarak detayları açabilirsiniz
       </div>
     </div>
   );

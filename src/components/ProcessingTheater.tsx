@@ -120,7 +120,7 @@ function Rail({ events, running }: { events: TraceEvent[]; running: boolean }) {
 function StageCard({ event, expanded, onSelect }: { event: TraceEvent; expanded: boolean; onSelect: () => void }) {
   if (!expanded) {
     return (
-      <motion.button layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} onClick={onSelect} className="flex w-full items-center gap-3 rounded-xl border border-[#0d2b45]/[.05] bg-[#0d2b45]/[.015] px-3 py-2 text-left transition hover:border-fteal/25 hover:bg-fteal/[.03]">
+      <motion.button layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} onClick={onSelect} className="flex w-full items-center gap-3 rounded-xl border border-[#0d2b45]/[.3] bg-[#0d2b45]/[.015] px-3 py-2 text-left transition hover:border-fteal/25 hover:bg-fteal/[.03]">
         {event.status === "error" ? <AlertTriangle size={11} className="shrink-0 text-coral" /> : <Check size={11} className="shrink-0 text-fgreen-light" />}
         <span className="text-[10px] font-medium text-slate-700">{event.label}</span>
         {event.algorithm && <span className="hidden truncate font-mono text-[8px] text-slate-500 md:block">{event.algorithm}</span>}
@@ -150,7 +150,7 @@ function StageCard({ event, expanded, onSelect }: { event: TraceEvent; expanded:
       </div>
 
       {event.algorithm && (
-        <div className="mt-3 rounded-xl border border-[#0d2b45]/[.06] bg-[#ffffff]/60 p-3">
+        <div className="mt-3 rounded-xl border border-[#0d2b45]/[.3] bg-[#ffffff]/60 p-3">
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5 rounded-md border border-fgreen/20 bg-fgreen/[.05] px-2 py-1 font-mono text-[9px] text-fgreen-light"><Cpu size={10} /> {event.algorithm}</span>
             <span className="font-mono text-[7px] uppercase tracking-[.18em] text-slate-500">neden bu yöntem?</span>
@@ -160,7 +160,7 @@ function StageCard({ event, expanded, onSelect }: { event: TraceEvent; expanded:
       )}
 
       {event.method?.length ? (
-        <div className="mt-2.5 rounded-xl border border-[#0d2b45]/[.06] bg-[#ffffff]/60 p-3">
+        <div className="mt-2.5 rounded-xl border border-[#0d2b45]/[.3] bg-[#ffffff]/60 p-3">
           <div className="mb-2 font-mono text-[7px] uppercase tracking-[.18em] text-slate-500">nasıl analiz etti?</div>
           <div className="space-y-1.5">
             {event.method.map((step, index) => (
@@ -268,11 +268,11 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
           </div>
           <div className="flex items-center gap-3">
             {!running && events.length > 0 && <button onClick={restart} className="flex items-center gap-1.5 rounded-lg border border-fteal/25 bg-fteal/[.06] px-3 py-2 text-[10px] font-semibold text-fteal-light transition hover:bg-fteal/10"><RotateCcw size={12} /> Baştan izle</button>}
-            <div className="rounded-lg border border-[#0d2b45]/[.08] bg-[#0d2b45]/[.02] px-3 py-1.5 text-right">
+            <div className="rounded-lg border border-[#0d2b45]/[.3] bg-[#0d2b45]/[.02] px-3 py-1.5 text-right">
               <div className="font-mono text-sm text-fteal-light">{elapsed.toFixed(1)}s</div>
               <div className="font-mono text-[7px] uppercase tracking-[.2em] text-slate-500">geçen süre</div>
             </div>
-            <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg border border-[#0d2b45]/10 text-slate-600 transition hover:border-[#0d2b45]/25 hover:text-[#0d2b45]"><X size={15} /></button>
+            <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg border border-[#0d2b45]/25 text-slate-600 transition hover:border-[#0d2b45]/25 hover:text-[#0d2b45]"><X size={15} /></button>
           </div>
         </header>
 
@@ -285,7 +285,7 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
           </aside>
 
           <section className="flex min-h-0 flex-col">
-            <div ref={streamRef} className="relative max-h-[calc(100vh-290px)] min-h-[320px] flex-1 space-y-2 overflow-y-auto rounded-2xl border border-[#0d2b45]/[.06] bg-[#ffffff]/60 p-4">
+            <div ref={streamRef} className="relative max-h-[calc(100vh-290px)] min-h-[320px] flex-1 space-y-2 overflow-y-auto rounded-2xl border border-[#0d2b45]/[.3] bg-[#ffffff]/60 p-4">
               <Corners />
               <AnimatePresence initial={false}>
                 {visible.map((event) => <StageCard key={event.id} event={event} expanded={event.id === expandedId} onSelect={() => setManualId(event.id === manualId ? null : event.id)} />)}
@@ -320,7 +320,7 @@ export function ProcessingTheater({ title, events, status, mode, onClose }: {
               )}
             </div>
 
-            <div className="mt-3 rounded-xl border border-[#0d2b45]/[.06] bg-[#eef4f9]/90 px-3 py-2 font-mono text-[8px] leading-4">
+            <div className="mt-3 rounded-xl border border-[#0d2b45]/[.3] bg-[#eef4f9]/90 px-3 py-2 font-mono text-[8px] leading-4">
               <div className="mb-1 flex items-center justify-between text-slate-500"><span className="uppercase tracking-[.2em]">sistem günlüğü</span><span>{visible.length} olay</span></div>
               {visible.slice(-4).map((event) => <div key={event.id} className="truncate text-fgreen-light/60">[{clock(event.timestamp)}] {event.status === "error" ? "✕" : "✓"} {event.label} :: {event.detail}</div>)}
               {visible.length === 0 && <div className="text-slate-400">[--:--:--] bağlantı bekleniyor…</div>}

@@ -1,4 +1,4 @@
-﻿# AI Business Orchestrator — deneme Akademi · Fintern Hackathon
+﻿# AI Business Orchestrator — Fibabanka · Fintern Hackathon
 
 Departmanlar arası karar otomasyonu prototipi. Bir kampanya fikri girildiğinde AI; geçmiş
 kampanya verileri, müşteri davranışları, mevsimsellik ve piyasa trendleriyle analiz eder,

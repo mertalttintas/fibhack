@@ -10,7 +10,7 @@ Sen kıdemli bir fintech ürün ekibinin parçasısın: bir tasarımcı, bir fro
 
 ## PROJE ÖZETİ
 
-**Ad:** AI Business Orchestrator (deneme Akademi — Fintern Hackathon projesi)
+**Ad:** AI Business Orchestrator (Fibabanka — Fintern Hackathon projesi)
 **Konumlandırma:** Bu bir departmanlar arası karar otomasyonu. Bir kampanya fikri girildiğinde, AI bunu geçmiş kampanya verileri, müşteri davranışları, mevsimsellik ve piyasa trendleriyle birlikte analiz eder; ilgili departmanlara somut görevler atar; ve neden o kararı verdiğini gerekçeleriyle gösterir.
 
 **Dört ana modül (öncekinden farkı: artık görev takibi ve karar şeffaflığı da var):**
@@ -21,16 +21,16 @@ Sen kıdemli bir fintech ürün ekibinin parçasısın: bir tasarımcı, bir fro
 
 ## MARKA / TEMA — FİBABANKA
 
-Bu proje deneme Akademi hackathonu için, arayüz deneme kurumsal kimliğini yansıtmalı:
-- **Ana renkler:** Koyu lacivert/gece mavisi taban (#0A2647 – #0B2A5B aralığında), deneme logosundaki mavi-yeşil elmas (diamond) tonları vurgu rengi olarak (teal/turkuaz #2FB6A6 gibi ve canlı yeşil #8DC63F gibi — "Akademi" yazısının yeşili).
+Bu proje Fibabanka hackathonu için, arayüz Fibabanka kurumsal kimliğini yansıtmalı:
+- **Ana renkler:** Koyu lacivert/gece mavisi taban (#0A2647 – #0B2A5B aralığında), Fibabanka logosundaki mavi-yeşil elmas (diamond) tonları vurgu rengi olarak (teal/turkuaz #2FB6A6 gibi ve canlı yeşil #8DC63F gibi — marka yeşili).
 - **İkincil vurgu:** Sunumlardaki arka plan dokusunda gördüğün gibi mercan/pembe (#E85D75 gibi) çok az, sadece nokta vurgu olarak (uyarı/rozet renginde) kullanılabilir.
-- **Logo motifi:** deneme logosundaki elmas (diamond) şeklini arka planda çok hafif, düşük opasiteli bir desen/watermark olarak kullanabilirsin (header'da, boş state'lerde, loading ekranlarında).
+- **Logo motifi:** Fibabanka logosundaki elmas (diamond) şeklini arka planda çok hafif, düşük opasiteli bir desen/watermark olarak kullanabilirsin (header'da, boş state'lerde, loading ekranlarında).
 - **Genel his:** Kurumsal ama donuk değil — koyu tema üzerine parlayan teal/yeşil vurgularla "yüksek teknoloji, güvenilir banka" hissi.
 
 ## SAYFA / EKRAN DÖKÜMÜ
 
 ### 1. Ana ekran — Fikir girişi
-- Header'da deneme elmas logosu (basit SVG ile yeniden üretilebilir, marka kopyası değil sadece ilham) çok hafif animasyonla (yavaşça dönen/parlayan glow) — bu "sistem canlı ve çalışıyor" hissi verir.
+- Header'da Fibabanka elmas logosu (basit SVG ile yeniden üretilebilir, marka kopyası değil sadece ilham) çok hafif animasyonla (yavaşça dönen/parlayan glow) — bu "sistem canlı ve çalışıyor" hissi verir.
 - Büyük başlık, altında input textarea, 3-4 örnek senaryo chip'i.
 - Sağ üstte küçük bir "Bugün işlenen kampanya: 12 · Ortalama karar süresi: 40sn" gibi canlı görünen sahte metrik şeridi — sistemin zaten kullanımda olduğu hissini pekiştirir.
 

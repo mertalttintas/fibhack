@@ -24,10 +24,13 @@ const BOARD_URL = "https://ai-business-orchestrator.vercel.app";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") return res.status(405).json({ error: "method_not_allowed" });
-  const { department, title, summary, rationale, priority, draft } = req.body ?? {};
+  // dependency: departmanlar arası talep — kart, görevin sahibi yerine ihtiyacın
+  // karşılanacağı departmanın kanalına gider; from talebi yapan departmandır.
+  const { department, title, summary, rationale, priority, draft, dependency } = req.body ?? {};
   if (!DEPARTMENTS.includes(department) || typeof title !== "string" || title.length > 300) {
     return res.status(400).json({ error: "invalid_input" });
   }
+  const isDependency = dependency && typeof dependency.message === "string" && DEPARTMENTS.includes(dependency.from);
 
   const channel = CHANNELS[department];
   const webhook = (process.env[ENV_KEYS[department]] || process.env.TEAMS_WEBHOOK_URL || "").trim();
@@ -36,15 +39,26 @@ export default async function handler(req: any, res: any) {
   // Slack webhook desteği: URL'den algılanır, Block Kit formatında gönderilir.
   // Kurumsal tarafta aynı env değişkenine Teams Workflows URL'si konabilir.
   if (webhook.includes("hooks.slack.com")) {
-    const blocks: any[] = [
-      { type: "header", text: { type: "plain_text", text: "🤖 Team-bot görev paketi", emoji: true } },
-      { type: "section", text: { type: "mrkdwn", text: `Merhaba *${department}* ekibi — onaylanan kampanya için yeni görev paketi yönlendirildi.` } },
-      { type: "section", text: { type: "mrkdwn", text: `*${title}*${typeof summary === "string" && summary ? `\n${summary}` : ""}`.slice(0, 2900) } },
-      { type: "section", fields: [
-        { type: "mrkdwn", text: `*Öncelik:*\n${typeof priority === "string" ? priority : "-"}` },
-        { type: "mrkdwn", text: `*Hedef kanal:*\n${channel}` },
-      ] },
-    ];
+    const blocks: any[] = isDependency
+      ? [
+          { type: "header", text: { type: "plain_text", text: "🤝 Team-bot departmanlar arası talep", emoji: true } },
+          { type: "section", text: { type: "mrkdwn", text: `Merhaba *${department}* ekibi — *${dependency.from}* ekibinin görevi için sizden bir ihtiyaç var.` } },
+          { type: "section", text: { type: "mrkdwn", text: `*İlgili görev:* ${title}${typeof dependency.need === "string" && dependency.need ? `\n*İhtiyaç:* ${dependency.need}` : ""}`.slice(0, 2900) } },
+          { type: "section", text: { type: "mrkdwn", text: dependency.message.slice(0, 2900) } },
+          { type: "section", fields: [
+            { type: "mrkdwn", text: `*Talep eden:*\n${dependency.from}` },
+            { type: "mrkdwn", text: `*Hedef kanal:*\n${channel}` },
+          ] },
+        ]
+      : [
+          { type: "header", text: { type: "plain_text", text: "🤖 Team-bot görev paketi", emoji: true } },
+          { type: "section", text: { type: "mrkdwn", text: `Merhaba *${department}* ekibi — onaylanan kampanya için yeni görev paketi yönlendirildi.` } },
+          { type: "section", text: { type: "mrkdwn", text: `*${title}*${typeof summary === "string" && summary ? `\n${summary}` : ""}`.slice(0, 2900) } },
+          { type: "section", fields: [
+            { type: "mrkdwn", text: `*Öncelik:*\n${typeof priority === "string" ? priority : "-"}` },
+            { type: "mrkdwn", text: `*Hedef kanal:*\n${channel}` },
+          ] },
+        ];
     if (typeof rationale === "string" && rationale) {
       blocks.push({ type: "section", text: { type: "mrkdwn", text: `*Karar gerekçesi:* ${rationale}`.slice(0, 2900) } });
     }
@@ -64,7 +78,7 @@ export default async function handler(req: any, res: any) {
       const response = await fetch(webhook, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: `Team-bot görev paketi: ${title}`, blocks }),
+        body: JSON.stringify({ text: isDependency ? `Team-bot departmanlar arası talep: ${title}` : `Team-bot görev paketi: ${title}`, blocks }),
       });
       if (!response.ok) throw new Error(`slack ${response.status}`);
       return res.status(200).json({ delivered: true, channel, via: "slack" });
@@ -74,20 +88,39 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  const body: any[] = [
-    { type: "TextBlock", text: "🤖 Team-bot görev paketi", weight: "Bolder", color: "Accent" },
-    { type: "TextBlock", text: `Merhaba ${department} ekibi — onaylanan kampanya için yeni görev paketi yönlendirildi.`, isSubtle: true, wrap: true, spacing: "None" },
-    { type: "TextBlock", text: title, weight: "Bolder", size: "Large", wrap: true },
-  ];
-  if (typeof summary === "string" && summary) body.push({ type: "TextBlock", text: summary, wrap: true });
-  body.push({
-    type: "FactSet",
-    facts: [
-      { title: "Departman", value: department },
-      { title: "Öncelik", value: typeof priority === "string" ? priority : "-" },
-      { title: "Kanal", value: channel },
-    ],
-  });
+  const body: any[] = isDependency
+    ? [
+        { type: "TextBlock", text: "🤝 Team-bot departmanlar arası talep", weight: "Bolder", color: "Accent" },
+        { type: "TextBlock", text: `Merhaba ${department} ekibi — ${dependency.from} ekibinin görevi için sizden bir ihtiyaç var.`, isSubtle: true, wrap: true, spacing: "None" },
+        { type: "TextBlock", text: title, weight: "Bolder", size: "Large", wrap: true },
+      ]
+    : [
+        { type: "TextBlock", text: "🤖 Team-bot görev paketi", weight: "Bolder", color: "Accent" },
+        { type: "TextBlock", text: `Merhaba ${department} ekibi — onaylanan kampanya için yeni görev paketi yönlendirildi.`, isSubtle: true, wrap: true, spacing: "None" },
+        { type: "TextBlock", text: title, weight: "Bolder", size: "Large", wrap: true },
+      ];
+  if (isDependency) {
+    if (typeof dependency.need === "string" && dependency.need) body.push({ type: "TextBlock", text: `İhtiyaç: ${dependency.need}`, wrap: true });
+    body.push({ type: "TextBlock", text: dependency.message, wrap: true });
+    body.push({
+      type: "FactSet",
+      facts: [
+        { title: "Talep eden", value: dependency.from },
+        { title: "Muhatap", value: department },
+        { title: "Kanal", value: channel },
+      ],
+    });
+  } else {
+    if (typeof summary === "string" && summary) body.push({ type: "TextBlock", text: summary, wrap: true });
+    body.push({
+      type: "FactSet",
+      facts: [
+        { title: "Departman", value: department },
+        { title: "Öncelik", value: typeof priority === "string" ? priority : "-" },
+        { title: "Kanal", value: channel },
+      ],
+    });
+  }
   if (typeof rationale === "string" && rationale) {
     body.push({ type: "TextBlock", text: `Karar gerekçesi: ${rationale}`, wrap: true, isSubtle: true });
   }

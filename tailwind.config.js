@@ -23,6 +23,14 @@ export default {
         },
         coral: "#D3365F",
         amber: "#B45309",
+        // Okunabilirlik: açık zeminde gri metinler bir ton koyulaştırıldı
+        // (slate-400 → varsayılan 500 değeri, 500 → 600, 600 → 700, 700 → 800)
+        slate: {
+          400: "#64748B",
+          500: "#475569",
+          600: "#334155",
+          700: "#1E293B",
+        },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

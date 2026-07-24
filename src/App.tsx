@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Sidebar } from "./components/Sidebar";
-import { NewCampaign } from "./pages/NewCampaign";
+import { NewCampaign, prefillStudio } from "./pages/NewCampaign";
 import { TaskBoard } from "./pages/TaskBoard";
 import { Signals } from "./pages/Signals";
 import { HistoryPage } from "./pages/History";
@@ -102,7 +102,7 @@ export default function App() {
   }, [campaigns]);
 
   return (
-    <div className="min-h-screen diamond-watermark">
+    <div className="min-h-screen">
       <Sidebar page={page} onNavigate={setPage} boardBadge={waitingCount} />
       <main className="pl-60">
         <AnimatePresence mode="wait">
@@ -125,7 +125,7 @@ export default function App() {
                 onNewCampaign={() => setPage("campaign")}
               />
             )}
-            {page === "signals" && <Signals />}
+            {page === "signals" && <Signals onConvert={(idea) => { prefillStudio(idea); setPage("campaign"); }} />}
             {page === "history" && <HistoryPage />}
           </motion.div>
         </AnimatePresence>

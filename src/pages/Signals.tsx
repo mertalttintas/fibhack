@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Search, LayoutGrid, ArrowUpRight, ArrowDownRight, Lightbulb } from "lucide-react";
+import { TrendingUp, TrendingDown, Search, LayoutGrid, ArrowUpRight, ArrowDownRight, Lightbulb, WandSparkles } from "lucide-react";
 import { Sparkline } from "../components/Sparkline";
 import { CountUp } from "../components/CountUp";
 import { topSearches, topTabs, trendSignals, type TrendSignal } from "../data/mock";
@@ -12,7 +12,7 @@ const TONE_TEXT: Record<string, string> = {
   coral: "text-coral",
 };
 
-function SignalCard({ signal, index }: { signal: TrendSignal; index: number }) {
+function SignalCard({ signal, index, onConvert }: { signal: TrendSignal; index: number; onConvert: (idea: string) => void }) {
   const falling = signal.change < 0;
   return (
     <motion.div
@@ -32,7 +32,7 @@ function SignalCard({ signal, index }: { signal: TrendSignal; index: number }) {
         </div>
       </div>
       <Sparkline data={signal.spark} tone={signal.tone} width={280} height={44} />
-      <div className="mt-4 flex gap-2 items-start bg-[#0d2b45]/[0.03] border border-[#0d2b45]/[0.07] rounded-xl px-3 py-2.5">
+      <div className="mt-4 flex gap-2 items-start bg-[#0d2b45]/[0.03] border border-[#0d2b45]/[.18] rounded-xl px-3 py-2.5">
         <Lightbulb size={14} className={cn("shrink-0 mt-0.5", falling ? "text-coral" : "text-amber")} />
         <div>
           <span className={cn("text-[10px] uppercase tracking-wider font-bold block mb-0.5", falling ? "text-coral" : "text-amber")}>
@@ -41,11 +41,19 @@ function SignalCard({ signal, index }: { signal: TrendSignal; index: number }) {
           <span className="text-xs text-slate-700 leading-snug">{signal.action}</span>
         </div>
       </div>
+      {signal.ideaSeed && (
+        <button
+          onClick={() => onConvert(signal.ideaSeed!)}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fteal to-fgreen py-2.5 text-xs font-bold text-[#ffffff] shadow-glow-teal-sm transition hover:opacity-90"
+        >
+          <WandSparkles size={13} /> Kampanyaya dönüştür
+        </button>
+      )}
     </motion.div>
   );
 }
 
-export function Signals() {
+export function Signals({ onConvert }: { onConvert: (idea: string) => void }) {
   const rising = trendSignals.filter((s) => s.change >= 0);
   const falling = trendSignals.filter((s) => s.change < 0);
   return (
@@ -62,7 +70,7 @@ export function Signals() {
         <span className="font-mono text-[10px] text-slate-500">{rising.length} sinyal · fırsat penceresi</span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-7">
-        {rising.map((s, i) => <SignalCard key={s.id} signal={s} index={i} />)}
+        {rising.map((s, i) => <SignalCard key={s.id} signal={s} index={i} onConvert={onConvert} />)}
       </div>
 
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#0d2b45]">
@@ -73,7 +81,7 @@ export function Signals() {
         Düşen sinyaller de karar motoruna girer: zayıflayan kanal ve ürünler kampanya planında otomatik olarak geri ağırlıklandırılır.
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {falling.map((s, i) => <SignalCard key={s.id} signal={s} index={i} />)}
+        {falling.map((s, i) => <SignalCard key={s.id} signal={s} index={i} onConvert={onConvert} />)}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

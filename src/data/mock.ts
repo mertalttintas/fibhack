@@ -35,13 +35,58 @@ export interface CampaignJob {
   brief: CampaignBrief;
   suggestions: string[];
   routing: RouteItem[];
+  outcome?: CampaignOutcome; // "Sonuçları gir" ile kaydedilen gerçekleşen sonuç
+}
+
+// ---- Öğrenen kurumsal hafıza ----------------------------------------------
+// Tamamlanan kampanyaların gerçekleşen sonuçları; localStorage'da tutulur ve
+// bir sonraki /api/process çağrısına benzerlik havuzuna katılmak üzere gönderilir.
+
+export interface CampaignOutcome {
+  name: string;
+  channel: string;
+  openRate: number; // %
+  conversion: number; // %
+  lesson: string; // öğrenilen ders — bir sonraki kampanyaya taşınan bilgi
+  recordedAt: string;
+}
+
+const OUTCOME_KEY = "fiba-campaign-outcomes";
+
+export function loadOutcomes(): CampaignOutcome[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(OUTCOME_KEY) ?? "[]");
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addOutcome(outcome: CampaignOutcome): CampaignOutcome[] {
+  const all = [outcome, ...loadOutcomes()].slice(0, 20);
+  try {
+    localStorage.setItem(OUTCOME_KEY, JSON.stringify(all));
+  } catch {
+    // depolama dolu/kapalıysa demo oturum içi devam eder
+  }
+  return all;
+}
+
+// Departmanlar arası ihtiyaç: AI'nın planladığı, Team-bot ile iletilmeye hazır talep
+export interface DeptDependency {
+  department: Department;
+  need: string;
+  message: string;
 }
 
 export interface DeptDetail {
   kpis: { label: string; value: string }[];
-  subtasks: { name: string; owner: string; eta: string; status: "planlandı" | "sürüyor" | "hazır" }[];
+  // expectation: AI'nın bu alt görevden ekipten tam olarak ne istediği (beklenen geliştirme/çıktı)
+  subtasks: { name: string; owner: string; eta: string; status: "planlandı" | "sürüyor" | "hazır"; expectation?: string }[];
   timeline: string;
   dataSources: string[];
+  dependencies?: DeptDependency[];
   risk: string;
 }
 
@@ -68,6 +113,7 @@ export interface DeptTask {
   details?: DeptDetail;
   draft?: DeptDraft; // "AI İşliyor" aşamasının çıktısı: ön çalışma paketi
   teams?: { sentAt: string; delivered: boolean; channel: string }; // Teams botu gönderim kaydı
+  depSends?: Record<number, { sentAt: string; delivered: boolean; channel: string }>; // dependencies dizisindeki index bazlı Team-bot gönderim kaydı
   ai?: {
     provider: string;
     model: string;
@@ -214,6 +260,7 @@ export interface PastCampaign {
   conversion: number;
   result: "Başarılı" | "Kısmi" | "Düşük";
   insight: string;
+  live?: boolean; // bu oturumda AI orkestrasyonuyla tamamlanıp arşive düşen kayıt
   details?: {
     objective: string;
     segment: string;
@@ -226,6 +273,72 @@ export interface PastCampaign {
   };
 }
 
+// ---- Canlı arşiv: tamamlanan kampanyaların Geçmiş sayfasına düşmesi --------
+// "Sonuçları gir" kaydedildiğinde brief + gerçekleşen metriklerden tam bir
+// arşiv kaydı türetilir; localStorage'da saklanır ve Geçmiş sayfasında
+// statik arşivin üstünde gösterilir.
+
+const LIVE_PAST_KEY = "fiba-live-past-campaigns";
+
+export function loadLivePastCampaigns(): PastCampaign[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(LIVE_PAST_KEY) ?? "[]");
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+export function buildLivePastCampaign(job: CampaignJob, outcome: CampaignOutcome): PastCampaign {
+  // Sonuç sınıfı, arşivdeki ölçütle aynı mantıkla türetilir (dönüşüm benchmark ~%5)
+  const result: PastCampaign["result"] = outcome.conversion >= 5 ? "Başarılı" : outcome.conversion >= 3.5 ? "Kısmi" : "Düşük";
+  const openTarget = 35;
+  const convTarget = 5;
+  // Haftalık dönüşüm eğrisi: 8 hafta, yumuşak rampayla gerçekleşen değere ulaşır
+  const spark = Array.from({ length: 8 }, (_, i) => Math.max(0.2, Math.round(outcome.conversion * ((i + 1) / 8) * (0.85 + 0.15 * Math.sin(i)) * 10) / 10));
+  spark[spark.length - 1] = outcome.conversion;
+  const date = new Intl.DateTimeFormat("tr-TR", { month: "short", year: "numeric" }).format(new Date(outcome.recordedAt));
+  return {
+    id: `live-${job.id}`,
+    name: job.title,
+    date,
+    channel: outcome.channel,
+    openRate: outcome.openRate,
+    conversion: outcome.conversion,
+    result,
+    insight: outcome.lesson.length > 110 ? `${outcome.lesson.slice(0, 107)}…` : outcome.lesson,
+    live: true,
+    details: {
+      objective: job.brief.objective,
+      segment: job.brief.segment,
+      duration: job.brief.timing,
+      reach: "Pilot dağıtım · CRM hedef listesi üzerinden",
+      kpis: [
+        { label: "Açılma oranı", target: `%${openTarget}`, actual: `%${outcome.openRate}`, hit: outcome.openRate >= openTarget },
+        { label: "Dönüşüm oranı", target: `%${convTarget}`, actual: `%${outcome.conversion}`, hit: outcome.conversion >= convTarget },
+        { label: "Brief KPI", target: job.brief.kpi.length > 46 ? `${job.brief.kpi.slice(0, 43)}…` : job.brief.kpi, actual: result === "Düşük" ? "hedef altı" : "karşılandı", hit: result !== "Düşük" },
+      ],
+      learnings: [
+        outcome.lesson,
+        `${outcome.channel} kanalı bu segmentte %${outcome.openRate} açılma üretti — kanal skor matrisine işlendi.`,
+      ],
+      departments: ["CRM", "Veri Platformları", "Legal", "Pazarlama"],
+      spark,
+    },
+  };
+}
+
+export function addPastCampaign(entry: PastCampaign): PastCampaign[] {
+  const all = [entry, ...loadLivePastCampaigns().filter((item) => item.id !== entry.id)].slice(0, 20);
+  try {
+    localStorage.setItem(LIVE_PAST_KEY, JSON.stringify(all));
+  } catch {
+    // depolama kapalıysa oturum içi devam
+  }
+  return all;
+}
+
 export interface TrendSignal {
   id: string;
   title: string;
@@ -234,6 +347,7 @@ export interface TrendSignal {
   spark: number[];
   action: string;
   tone: "teal" | "green" | "amber" | "coral";
+  ideaSeed?: string; // "Kampanyaya dönüştür" ile stüdyoya taşınan hazır fikir metni
 }
 
 // ---- Canlı metrik şeridi ---------------------------------------------------
@@ -655,13 +769,17 @@ export function generateDeptCards(idea: string): DeptCard[] {
           { label: "Churn öncelikli grup", value: "4.100 müşteri" },
         ],
         subtasks: [
-          { name: "Segment filtre setinin çalıştırılması", owner: "CRM Analitik Ekibi", eta: "T+1 gün", status: "sürüyor" },
-          { name: "Churn skoru ile önceliklendirme", owner: "CRM Analitik Ekibi", eta: "T+2 gün", status: "planlandı" },
-          { name: "KVKK izinli iletişim listesinin doğrulanması", owner: "CRM Operasyon", eta: "T+2 gün", status: "planlandı" },
-          { name: "Hedef listenin kampanya motoruna yüklenmesi", owner: "CRM Operasyon", eta: "T+3 gün", status: "planlandı" },
+          { name: "Segment filtre setinin çalıştırılması", owner: "CRM Analitik Ekibi", eta: "T+1 gün", status: "sürüyor", expectation: "18-30 yaş + aktif mobil + son 6 ayda kira ödemesi filtreleriyle segment sorgusu geliştirilecek; çıktı müşteri ID listesi olarak kampanya şemasında teslim edilecek." },
+          { name: "Churn skoru ile önceliklendirme", owner: "CRM Analitik Ekibi", eta: "T+2 gün", status: "planlandı", expectation: "Churn tahmin modeli v3 skorları segment listesine bağlanacak; skor >0.6 olan 4.100 müşteri 'öncelikli' etiketiyle ayrı kolon olarak işaretlenecek." },
+          { name: "KVKK izinli iletişim listesinin doğrulanması", owner: "CRM Operasyon", eta: "T+2 gün", status: "planlandı", expectation: "Push ve in-app kanalları için izin durumu müşteri bazında doğrulanacak; izni olmayanlar listeden düşülecek ve düşüş oranı raporlanacak." },
+          { name: "Hedef listenin kampanya motoruna yüklenmesi", owner: "CRM Operasyon", eta: "T+3 gün", status: "planlandı", expectation: "Nihai liste kampanya motoruna segment kodu ile yüklenecek; yükleme sonrası adet mutabakatı (liste = motor) ekran görüntüsüyle kapatılacak." },
         ],
         timeline: "T+0 filtre · T+2 doğrulama · T+3 kampanya motoru yüklemesi",
         dataSources: ["Mobil bankacılık davranış verisi", "Kira ödeme işlem geçmişi", "Churn tahmin modeli v3", "İzinli iletişim veritabanı"],
+        dependencies: [
+          { department: "Veri Platformları", need: "Churn modeli v3 skor tablosuna okuma erişimi", message: "Merhaba Veri Platformları ekibi — CRM, kampanya segmentini önceliklendirmek için churn tahmin modeli v3'ün güncel skor tablosuna okuma erişimi rica ediyor. Segment çalışması T+2'de skorlara ihtiyaç duyuyor; erişim T+1 sonuna kadar açılabilir mi?" },
+          { department: "Legal", need: "Puan programı için güncel açık rıza metni teyidi", message: "Merhaba Legal ekibi — CRM, izinli iletişim listesi doğrulamasında kullanılmak üzere puan programına ait güncel açık rıza metninin geçerli sürümünü rica ediyor. T+2'deki liste doğrulamasından önce paylaşılırsa süreç gecikmez." },
+        ],
         risk: "İzinli iletişim oranı genç segmentte %78 — liste daralması payı planlamaya dahil edildi.",
       },
     },
@@ -685,13 +803,17 @@ export function generateDeptCards(idea: string): DeptCard[] {
           { label: "Otomatik rapor", value: "Günlük 09:00" },
         ],
         subtasks: [
-          { name: "Event şemasının şablondan türetilmesi", owner: "Veri Mühendisliği", eta: "T+1 gün", status: "sürüyor" },
-          { name: "Funnel dashboard kurulumu", owner: "BI Ekibi", eta: "T+2 gün", status: "planlandı" },
-          { name: "A/B test ölçüm altyapısının bağlanması", owner: "Veri Mühendisliği", eta: "T+2 gün", status: "planlandı" },
-          { name: "Otomatik rapor zamanlayıcısı", owner: "BI Ekibi", eta: "T+3 gün", status: "planlandı" },
+          { name: "Event şemasının şablondan türetilmesi", owner: "Veri Mühendisliği", eta: "T+1 gün", status: "sürüyor", expectation: "5 adımlı funnel (gösterim→tıklama→başvuru→değerlendirme→onay) için event isimleri ve alanları standart şablondan türetilip veri sözlüğüne eklenecek." },
+          { name: "Funnel dashboard kurulumu", owner: "BI Ekibi", eta: "T+2 gün", status: "planlandı", expectation: "Gerçek zamanlı funnel paneli geliştirilecek: adım bazlı dönüşüm, kanal kırılımı ve saatlik trend; kampanya ekibine görüntüleme yetkisiyle yayınlanacak." },
+          { name: "A/B test ölçüm altyapısının bağlanması", owner: "Veri Mühendisliği", eta: "T+2 gün", status: "planlandı", expectation: "Push varyant ID'si event akışına parametre olarak eklenecek; varyant bazlı açılma ve dönüşüm ayrı ayrı ölçülebilir olacak." },
+          { name: "Otomatik rapor zamanlayıcısı", owner: "BI Ekibi", eta: "T+3 gün", status: "planlandı", expectation: "Her gün 09:00'da kampanya ekibine önceki günün funnel özetini gönderen zamanlanmış rapor kurulacak; ilk gönderim test edilip doğrulanacak." },
         ],
         timeline: "T+0 şema · T+2 dashboard · T+3 otomasyon",
         dataSources: ["Push bildirim event akışı", "Başvuru API logları", "Kredi onay sistemi", "A/B test platformu"],
+        dependencies: [
+          { department: "CRM", need: "Nihai segment kodu ve hedef liste adedi", message: "Merhaba CRM ekibi — Veri Platformları, funnel dashboard'unda hedef baz oranlarını doğru hesaplamak için kampanya motoruna yüklenecek nihai segment kodunu ve liste adedini rica ediyor. Dashboard T+2'de yayına alınacak; bilgi T+1'de paylaşılabilir mi?" },
+          { department: "Pazarlama", need: "Push A/B varyant ID'leri ve gönderim takvimi", message: "Merhaba Pazarlama ekibi — Veri Platformları, A/B ölçüm altyapısını bağlamak için push varyant ID'lerini ve planlanan gönderim takvimini rica ediyor. Varyant isimleri kesinleşir kesinleşmez iletilirse ölçüm lansmandan önce hazır olur." },
+        ],
         risk: "Başvuru API'sinde event kaybı geçmişte %0,3 ölçüldü — mutabakat job'u eklendi.",
       },
     },
@@ -715,13 +837,16 @@ export function generateDeptCards(idea: string): DeptCard[] {
           { label: "Rıza metni güncellemesi", value: "1 revizyon" },
         ],
         subtasks: [
-          { name: "BDDK duyuru gerekliliği ön incelemesi", owner: "Uyum Ofisi", eta: "T+1 gün", status: "sürüyor" },
-          { name: "KVKK açık rıza metni revizyonu", owner: "Hukuk Müşavirliği", eta: "T+2 gün", status: "planlandı" },
-          { name: "Reklam kurulu kriter kontrol listesi", owner: "Uyum Ofisi", eta: "T+2 gün", status: "planlandı" },
-          { name: "Nihai onay ve imza turu", owner: "Hukuk Müşavirliği", eta: "T+3 gün", status: "planlandı" },
+          { name: "BDDK duyuru gerekliliği ön incelemesi", owner: "Uyum Ofisi", eta: "T+1 gün", status: "sürüyor", expectation: "Puan oranı iletişiminin BDDK duyuru şartına girip girmediği yazılı görüşle netleştirilecek; giriyorsa duyuru süreci aynı gün başlatılacak." },
+          { name: "KVKK açık rıza metni revizyonu", owner: "Hukuk Müşavirliği", eta: "T+2 gün", status: "planlandı", expectation: "Puan programı veri işleme amaçlarını kapsayan rıza metni revize edilecek; değişiklikler karşılaştırmalı (eski/yeni) olarak paylaşılacak." },
+          { name: "Reklam kurulu kriter kontrol listesi", owner: "Uyum Ofisi", eta: "T+2 gün", status: "planlandı", expectation: "Kampanya metinleri 12 maddelik kontrol listesinden geçirilecek; uymayan ifadeler için düzeltme önerisi satır bazında yazılacak." },
+          { name: "Nihai onay ve imza turu", owner: "Hukuk Müşavirliği", eta: "T+3 gün", status: "planlandı", expectation: "Tüm kontroller kapandıktan sonra onay yazısı imzalanıp kampanya dosyasına eklenecek; hedef süre 3 iş günü (önceki kampanyada 6 gündü)." },
         ],
         timeline: "T+0 ön inceleme · T+2 revizyonlar · T+3 nihai onay",
         dataSources: ["BDDK mevzuat takip sistemi", "KVKK rıza yönetim platformu", "Önceki kampanya onay arşivi"],
+        dependencies: [
+          { department: "Pazarlama", need: "Nihai push metinleri ve kampanya taahhüt cümlesi", message: "Merhaba Pazarlama ekibi — Legal, reklam kurulu kriter kontrolü ve BDDK ön incelemesi için nihai push metin varyantlarını ve kampanya taahhüt cümlesini rica ediyor. Metinler T+1 sonuna kadar iletilirse 3 günlük onay hedefi korunur." },
+        ],
         risk: "Puan oranı iletişimi 'faiz benzeri getiri' sayılırsa BDDK duyurusu zorunlu — alternatif metin hazır tutuluyor.",
       },
     },
@@ -731,7 +856,7 @@ export function generateDeptCards(idea: string): DeptCard[] {
       items: [
         "Ana kanal: Push bildirimi (2 varyantlı A/B testi)",
         "Destek kanal: In-app story formatı, 18-30 segmentine özel",
-        "Görsel dil: kampüs/genç yaşam teması, deneme marka kiti",
+        "Görsel dil: kampüs/genç yaşam teması, Fibabanka marka kiti",
       ],
       metric: { label: "Beklenen açılma", value: 42, suffix: "%" },
       warning: null,
@@ -745,13 +870,17 @@ export function generateDeptCards(idea: string): DeptCard[] {
           { label: "Lansman hedefi", value: "T+7 gün" },
         ],
         subtasks: [
-          { name: "Push metni A/B varyantlarının yazılması", owner: "İçerik Ekibi", eta: "T+2 gün", status: "sürüyor" },
-          { name: "Kampüs temalı story setinin tasarımı", owner: "Kreatif Stüdyo", eta: "T+4 gün", status: "planlandı" },
-          { name: "Kanal takvimi ve frekans planı", owner: "Kampanya Yönetimi", eta: "T+3 gün", status: "planlandı" },
-          { name: "Lansman sonrası 48 saat optimizasyon nöbeti", owner: "Kampanya Yönetimi", eta: "T+7 gün", status: "planlandı" },
+          { name: "Push metni A/B varyantlarının yazılması", owner: "İçerik Ekibi", eta: "T+2 gün", status: "sürüyor", expectation: "İki varyant yazılacak: A fayda odaklı, B aciliyet odaklı; en fazla 1 emoji, karakter limiti içinde ve Legal kontrolüne hazır biçimde teslim edilecek." },
+          { name: "Kampüs temalı story setinin tasarımı", owner: "Kreatif Stüdyo", eta: "T+4 gün", status: "planlandı", expectation: "18-30 segmentine özel 3 ekranlık in-app story seti marka kiti v4 ile tasarlanacak; başlık + CTA metinleriyle birlikte teslim edilecek." },
+          { name: "Kanal takvimi ve frekans planı", owner: "Kampanya Yönetimi", eta: "T+3 gün", status: "planlandı", expectation: "Push + in-app gönderim takvimi hazırlanacak; haftalık maksimum 2 push kuralına uyum takvim üzerinde açıkça gösterilecek." },
+          { name: "Lansman sonrası 48 saat optimizasyon nöbeti", owner: "Kampanya Yönetimi", eta: "T+7 gün", status: "planlandı", expectation: "İlk 48 saatte funnel paneli izlenecek; düşük performanslı varyant kapatılıp bütçe kazanana kaydırılacak, karar notu panoya işlenecek." },
         ],
         timeline: "T+0 brief · T+4 kreatif teslim · T+7 lansman · T+9 optimizasyon",
         dataSources: ["Mart 2025 kampanya sonuç raporu", "In-app etkileşim analitiği", "Marka kiti v4", "Talep sinyali paneli"],
+        dependencies: [
+          { department: "CRM", need: "Hedef segment büyüklüğü ve alt segment kırılımı", message: "Merhaba CRM ekibi — Pazarlama, kanal takvimi ve bütçe planı için nihai hedef segment büyüklüğünü ve kira ödeyen alt segment kırılımını rica ediyor. T+2'deki takvim çalışmasından önce paylaşılırsa plan tek seferde kesinleşir." },
+          { department: "Legal", need: "Push metinleri için hızlı ön onay penceresi", message: "Merhaba Legal ekibi — Pazarlama, T+2'de teslim edilecek push A/B varyantları için T+3'te 1 saatlik hızlı ön onay penceresi rica ediyor. Erken geri bildirim, T+7 lansman hedefini güvenceye alacak." },
+        ],
         risk: "Genç segmentte push yorgunluğu izleniyor — haftalık frekans limiti 2 bildirimle sınırlandı.",
       },
     },
@@ -1037,6 +1166,7 @@ export const trendSignals: TrendSignal[] = [
     spark: [12, 14, 13, 16, 18, 17, 21, 24, 23, 27, 30, 34],
     action: "Konut kredisi ön onay kampanyası başlat — faiz indirimi dönemi talebi karşıla.",
     tone: "teal",
+    ideaSeed: "Konut kredisi hesaplama ekranı kullanımı son 30 günde %34 arttı. Bu talebi karşılamak için ev almayı planlayan müşterilere konut kredisi ön onay kampanyası: hesaplama ekranını kullananlara kişiselleştirilmiş ön onay teklifi ve dijital başvuru kolaylığı.",
   },
   {
     id: "s2",
@@ -1046,6 +1176,7 @@ export const trendSignals: TrendSignal[] = [
     spark: [8, 9, 11, 10, 12, 14, 13, 15, 17, 18, 19, 21],
     action: "Alarm kuran müşterilere vadeli döviz mevduatı önerisi gönder.",
     tone: "green",
+    ideaSeed: "Döviz alarmı kurulumları %21 arttı. Alarm kuran müşterilere kur hedefi gerçekleştiğinde otomatik vadeli döviz mevduatı önerisi: in-app teklif ve avantajlı vade oranıyla birikimi bankada tutma kampanyası.",
   },
   {
     id: "s3",
@@ -1055,6 +1186,7 @@ export const trendSignals: TrendSignal[] = [
     spark: [5, 6, 5, 7, 9, 12, 15, 19, 22, 26, 29, 31],
     action: "Genç segment hoş geldin paketini kayıt haftasından önce lansmana hazırla.",
     tone: "amber",
+    ideaSeed: "Üniversite kayıt dönemi öncesi 'öğrenci hesabı' aramaları %31 arttı. 18-25 yaş yeni üniversite öğrencilerine hoş geldin paketi: masrafsız öğrenci hesabı, kira ödemelerine puan ve kampüs fırsatları; kayıt haftasından önce lansman.",
   },
   {
     id: "s4",
@@ -1064,6 +1196,7 @@ export const trendSignals: TrendSignal[] = [
     spark: [10, 10, 11, 12, 11, 13, 14, 15, 15, 16, 17, 18],
     action: "Yapılandırma teklifini proaktif sun — çağrı merkezi yükünü azalt.",
     tone: "amber",
+    ideaSeed: "Kredi kartı borç yapılandırma sayfası kullanımı %18 arttı. Ödeme güçlüğü sinyali veren müşterilere proaktif yapılandırma kampanyası: çağrı merkezini beklemeden uygulama içinden kişiselleştirilmiş taksitlendirme teklifi.",
   },
   {
     id: "s5",
@@ -1073,6 +1206,7 @@ export const trendSignals: TrendSignal[] = [
     spark: [7, 8, 8, 9, 10, 10, 11, 12, 13, 14, 15, 16],
     action: "KOBİ'lere e-ticaret entegrasyonlu POS + işletme kredisi paketini öne çıkar.",
     tone: "teal",
+    ideaSeed: "KOBİ segmentinde 'pos komisyon' aramaları %16 arttı. E-ticaret entegrasyonlu POS + işletme kredisi paketi kampanyası: komisyon avantajı ve hızlı limit tahsisiyle KOBİ'lere özel teklif.",
   },
   {
     id: "s6",
@@ -1082,6 +1216,7 @@ export const trendSignals: TrendSignal[] = [
     spark: [18, 19, 18, 20, 21, 22, 24, 25, 27, 29, 31, 33],
     action: "Kampanya vitrini talebi artıyor — kişiselleştirilmiş sıralama testine başla.",
     tone: "green",
+    ideaSeed: "Kampanyalar sekmesi görüntülenmesi %15 arttı. Kampanya vitrininde kişiselleştirilmiş sıralama pilotu: müşteri davranışına göre sıralanan teklifler ve dönüşüm etkisinin A/B testiyle ölçülmesi.",
   },
   {
     id: "s7",
@@ -1091,6 +1226,7 @@ export const trendSignals: TrendSignal[] = [
     spark: [6, 6, 7, 8, 8, 9, 10, 11, 11, 12, 13, 14],
     action: "Gram bazlı düzenli birikim talimatı kampanyasını öne al — Haziran 2025 öğrenimi geçerli.",
     tone: "green",
+    ideaSeed: "Altın hesabı açılışları %14 arttı. Gram bazlı düzenli birikim talimatı kampanyası: aylık otomatik altın alım talimatı veren müşterilere komisyon avantajı ve birikim hedefi takibi.",
   },
   {
     id: "s8",
@@ -1100,6 +1236,7 @@ export const trendSignals: TrendSignal[] = [
     spark: [4, 5, 6, 7, 9, 10, 12, 13, 15, 16, 18, 19],
     action: "Konut + eşya kredisi birleşik paketini düğün sezonu bitmeden lansmana hazırla.",
     tone: "teal",
+    ideaSeed: "Düğün sezonu öncesi 'evlilik kredisi' aramaları %19 arttı. Evlenecek çiftlere özel ihtiyaç kredisi ve eşya kampanyası paketi: düğün takvimine göre esnek ödeme başlangıcı ve çift hesabı avantajları.",
   },
   {
     id: "s9",
